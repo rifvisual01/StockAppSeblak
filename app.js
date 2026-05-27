@@ -150,6 +150,7 @@ function emitDataChanged(records) {
       name: record.name || '',
       category: record.category || '',
       price: Number(record.price) || 0,
+      tracks_stock: record.tracks_stock !== false,
       stock: Number(record.stock) || 0,
       min_stock: Number(record.min_stock) || 0,
       updated_at: record.updated_at || new Date().toISOString(),
@@ -202,6 +203,7 @@ function emitDataChanged(records) {
       name: row.name,
       category: row.category || '',
       price: row.price || 0,
+      tracks_stock: row.tracks_stock !== false,
       stock: row.stock || 0,
       min_stock: row.min_stock || 0,
       updated_at: row.updated_at,
@@ -275,7 +277,7 @@ function emitDataChanged(records) {
     if (!client || !navigator.onLine) return;
     const queries = [
       client.from(tables.users).select('id,name,pin,role,updated_at,deleted_at').order('updated_at', { ascending: true }),
-      client.from(tables.items).select('id,name,category,price,stock,min_stock,updated_at,deleted_at').order('updated_at', { ascending: true }),
+      client.from(tables.items).select('id,name,category,price,tracks_stock,stock,min_stock,updated_at,deleted_at').order('updated_at', { ascending: true }),
       client.from(tables.stockLogs).select('id,item_id,item_name,category,price,user_name,tx_type,qty,stock_before,stock_after,note,created_at,updated_at,deleted_at').order('updated_at', { ascending: true })
     ];
 
@@ -564,7 +566,12 @@ function getUsers() { return window.allData.filter(d => d.type === 'user'); }
 function getTxs() { return window.allData.filter(d => d.type === 'tx').sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); }
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
+function itemUsesStock(item) {
+  return item?.tracks_stock !== false;
+}
+
 function getStockStatus(item) {
+  if (!itemUsesStock(item)) return { label:'Non-stok', cls:'bg-blue-100 text-blue-700', icon:'minus-circle' };
   if (item.stock <= 0) return { label:'Habis', cls:'bg-red-100 text-red-700', icon:'alert-circle' };
   if (item.stock <= item.min_stock) return { label:'Menipis', cls:'bg-amber-100 text-amber-700', icon:'alert-triangle' };
   return { label:'Aman', cls:'bg-emerald-100 text-emerald-700', icon:'check-circle' };
@@ -880,7 +887,7 @@ function renderMain(cfg) {
     { id:'history', icon:'history', label:'Riwayat' },
   ];
   if (isAdmin) {
-    menuItems.push({ id:'reports', icon:'bar-chart-3', label:'Laporan Barang' });
+    menuItems.push({ id:'reports', icon:'bar-chart-3', label:'Laporan' });
     menuItems.push({ id:'users', icon:'users', label:'Users' });
   }
 
@@ -962,8 +969,9 @@ function renderMain(cfg) {
 
 function renderNotifBadge() {
   const items = getItems();
-  const low = items.filter(i => i.stock > 0 && i.stock <= i.min_stock).length;
-  const out = items.filter(i => i.stock <= 0).length;
+  const stockItems = items.filter(itemUsesStock);
+  const low = stockItems.filter(i => i.stock > 0 && i.stock <= i.min_stock).length;
+  const out = stockItems.filter(i => i.stock <= 0).length;
   const total = low + out;
   if (total === 0) return '';
   return `<button id="btn-notif-bell" class="relative hover:opacity-90 transition transform hover:scale-110"><i data-lucide="bell" style="width:20px;height:20px;color:white"></i><span class="absolute -top-2 -right-2 w-5 h-5 bg-yellow-300 text-red-700 text-[11px] font-900 rounded-full flex items-center justify-center shadow-lg">${total}</span></button>`;
@@ -1017,17 +1025,18 @@ function renderContent(cfg) {
 function renderDashboard(cfg) {
   const items = getItems();
   const txs = getTxs();
-  const safe = items.filter(i=>i.stock>i.min_stock).length;
-  const low = items.filter(i=>i.stock>0&&i.stock<=i.min_stock).length;
-  const out = items.filter(i=>i.stock<=0).length;
+  const stockItems = items.filter(itemUsesStock);
+  const safe = stockItems.filter(i=>i.stock>i.min_stock).length;
+  const low = stockItems.filter(i=>i.stock>0&&i.stock<=i.min_stock).length;
+  const out = stockItems.filter(i=>i.stock<=0).length;
   const todayTxs = txs.filter(t=>{const d=new Date(t.timestamp);const n=new Date();return d.toDateString()===n.toDateString();});
   const todayOut = todayTxs.filter(t=>t.tx_type==='OUT').reduce((s,t)=>s+(t.qty||0),0);
   const todayIn = todayTxs.filter(t=>t.tx_type==='IN').reduce((s,t)=>s+(t.qty||0),0);
-  const totalValue = items.reduce((s,i)=>s+(i.price||0)*(i.stock||0),0);
+  const totalValue = stockItems.reduce((s,i)=>s+(i.price||0)*(i.stock||0),0);
 
-  const alertItems = items.filter(i=>i.stock<=i.min_stock).slice(0,5);
-  const lowItems = items.filter(i=>i.stock>0&&i.stock<=i.min_stock);
-  const outItems = items.filter(i=>i.stock<=0);
+  const alertItems = stockItems.filter(i=>i.stock<=i.min_stock).slice(0,5);
+  const lowItems = stockItems.filter(i=>i.stock>0&&i.stock<=i.min_stock);
+  const outItems = stockItems.filter(i=>i.stock<=0);
 
   return `
   <div class="fade-in space-y-6">
@@ -1177,10 +1186,10 @@ function renderItems(cfg) {
                   ${item.category?`<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-700">${item.category}</span>`:''}
                   <span class="text-[10px] font-600 px-2 py-0.5 rounded-lg ${st.cls}">${st.label}</span>
                 </div>
-                <div class="text-xs text-gray-500 mt-1">${formatCurrency(item.price)} · min: ${item.min_stock}</div>
+                <div class="text-xs text-gray-500 mt-1">${formatCurrency(item.price)} · ${itemUsesStock(item) ? `min: ${item.min_stock}` : 'tanpa kontrol stok'}</div>
               </div>
               <div class="text-right shrink-0">
-                <div class="text-lg font-800 ${item.stock<=0?'text-red-600':item.stock<=item.min_stock?'text-amber-600':'text-emerald-600'}">${item.stock}</div>
+                <div class="text-lg font-800 ${!itemUsesStock(item)?'text-blue-600':item.stock<=0?'text-red-600':item.stock<=item.min_stock?'text-amber-600':'text-emerald-600'}">${itemUsesStock(item) ? item.stock : '∞'}</div>
               </div>
               ${currentUser.role==='admin'?`
               <div class="flex gap-1 ml-2 shrink-0">
@@ -1198,6 +1207,7 @@ function renderItems(cfg) {
 
 function renderItemForm() {
   const isEdit = !!editingItem;
+  const usesStock = isEdit ? itemUsesStock(editingItem) : true;
   const categories = getCategories();
   const currentCategory = isEdit ? (editingItem.category || '') : '';
   const categoryOptions = currentCategory && !categories.includes(currentCategory)
@@ -1267,8 +1277,16 @@ function renderItemForm() {
           </div>
         </div>
 
+        <label class="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-red-50/60 px-3 py-2">
+          <span>
+            <span class="block text-xs font-800 text-gray-800">Pakai stok</span>
+            <span class="block text-[11px] text-gray-500 mt-0.5">Matikan untuk item yang selalu bisa checkout tanpa batas stok.</span>
+          </span>
+          <input id="fi-tracks-stock" type="checkbox" class="w-5 h-5 accent-red-600" ${usesStock?'checked':''}>
+        </label>
+
         <!-- Stok Awal & Stok Minimum (2 kolom) -->
-        <div class="grid grid-cols-2 gap-3">
+        <div id="stock-fields" class="grid grid-cols-2 gap-3 ${usesStock?'':'opacity-50'}">
           <!-- Stok -->
           <div>
             <label class="block text-xs font-700 text-gray-700 mb-1.5">${isEdit?'Stok':'Stok Awal'} <span class="text-red-600">*</span></label>
@@ -1276,10 +1294,10 @@ function renderItemForm() {
               id="fi-stock" 
               type="number" 
               min="0"
-              value="${isEdit?editingItem.stock:'0'}" 
+              value="${usesStock ? (isEdit?editingItem.stock:'0') : '0'}" 
               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-red-400 focus:ring-0 transition" 
               placeholder="0"
-              required>
+              ${usesStock?'required':'disabled'}>
           </div>
 
           <!-- Stok Minimum -->
@@ -1289,10 +1307,10 @@ function renderItemForm() {
               id="fi-min" 
               type="number" 
               min="0"
-              value="${isEdit?editingItem.min_stock:'5'}" 
+              value="${usesStock ? (isEdit?editingItem.min_stock:'5') : '0'}" 
               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-red-400 focus:ring-0 transition" 
               placeholder="5"
-              required>
+              ${usesStock?'required':'disabled'}>
           </div>
         </div>
 
@@ -1395,7 +1413,7 @@ function renderTransaction(cfg) {
               <div class="w-full p-4 hover:bg-red-50 transition flex items-center justify-between group">
                 <div class="flex-1 min-w-0">
                   <div class="font-600 text-gray-800 text-sm">${item.name}</div>
-                  <div class="text-xs text-gray-500 mt-1">${formatCurrency(item.price)} · Stok: ${item.stock}</div>
+                  <div class="text-xs text-gray-500 mt-1">${formatCurrency(item.price)} · ${itemUsesStock(item) ? `Stok: ${item.stock}` : 'Tanpa stok'}</div>
                 </div>
                 <div class="flex items-center gap-2 ml-3 shrink-0">
                   ${qty > 0 ? `<button data-quick-minus="${item.__backendId}" class="w-9 h-9 rounded-lg bg-red-100 text-red-700 flex items-center justify-center font-900 hover:bg-red-200 transition">-</button><span class="min-w-8 text-center px-2 py-1 rounded-full bg-red-600 text-white text-sm font-700">${qty}</span>` : ''}
@@ -1604,7 +1622,7 @@ function renderStockModal() {
             </div>
             <div class="text-right">
               <div class="text-lg font-800 ${showStockModal==='low'?'text-amber-600':'text-red-600'}">${item.stock}</div>
-              <div class="text-xs text-gray-400">min: ${item.min_stock}</div>
+              <div class="text-xs text-gray-400">${itemUsesStock(item) ? `min: ${item.min_stock}` : 'tanpa stok'}</div>
             </div>
           </div>`;
         }).join('')}
@@ -1731,7 +1749,7 @@ function renderReports(cfg) {
         }).join('')}</div></div></div>`;
   }
 
-  return `<div class="fade-in space-y-6"><div><h2 class="text-2xl font-800 text-gray-800">Laporan Barang</h2><p class="text-gray-500 text-sm mt-0.5">Insight operasional berbasis data</p></div><!-- Date Filter Minimalis 1 Baris --><div class="bg-gradient-to-r from-red-50 to-white rounded-xl border border-red-200 p-2.5 flex items-center gap-2"><div class="flex-1 min-w-0"><input id="report-date-start" type="date" value="${window.reportDateStart||''}" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:border-red-400" title="Dari tanggal"></div><span class="text-gray-400 text-xs font-500 px-1">–</span><div class="flex-1 min-w-0"><input id="report-date-end" type="date" value="${window.reportDateEnd||''}" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:border-red-400" title="Sampai tanggal"></div><button id="btn-clear-date-filter" class="px-3 py-1.5 rounded-lg border border-red-300 text-red-600 text-xs font-600 hover:bg-red-100 transition whitespace-nowrap bg-white">Bersihkan</button></div><div class="grid grid-cols-2 lg:grid-cols-4 gap-3"><div class="bg-red-600 rounded-2xl p-4 border border-red-700 text-center text-white"><div class="text-xs font-500 mb-1 text-white/80">Total Keluar</div><div class="text-2xl font-800">${outTxs.reduce((s,t)=>s+(t.qty||0),0)}</div></div><div class="bg-emerald-600 rounded-2xl p-4 border border-emerald-700 text-center text-white"><div class="text-xs font-500 mb-1 text-white/80">Total Masuk</div><div class="text-2xl font-800">${filteredTxs.filter(t=>t.tx_type==='IN').reduce((s,t)=>s+(t.qty||0),0)}</div></div><div class="bg-white rounded-2xl p-4 border border-gray-200 text-center"><div class="text-xs text-gray-600 font-500 mb-1">Estimasi Pengeluaran</div><div class="text-lg font-800 text-gray-800">${formatCurrency(estRevenue)}</div></div><div class="bg-blue-600 rounded-2xl p-4 border border-blue-700 text-center text-white"><div class="text-xs font-500 mb-1 text-white/80">Total Transaksi</div><div class="text-2xl font-800">${filteredTxs.length}</div></div></div><div class="bg-white rounded-2xl border border-gray-100 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4 flex items-center gap-2"><i data-lucide="trending-up" style="width:16px;height:16px;color:#dc2626"></i>Barang Terlaris (Keluar)</h3>${topItems.length===0?'<p class="text-gray-400 text-sm">Belum ada data</p>':`<div class="space-y-3">${topItems.map((ti,idx) => `<div class="flex items-center gap-3 p-3 rounded-xl ${idx % 2 === 0 ? 'bg-red-50 border border-red-200' : 'bg-white border border-gray-100'}"><span class="w-6 text-center text-xs font-800 ${idx===0?'text-red-600':'text-gray-400'}">${idx+1}</span><div class="flex-1"><div class="flex items-center justify-between mb-1"><span class="text-sm font-600 text-gray-800">${ti[0]}</span><span class="text-sm font-700 text-gray-600">${ti[1]}</span></div><div class="w-full bg-gray-100 rounded-full h-2"><div class="h-2 rounded-full ${idx===0?'bg-red-600':'bg-red-400'}" style="width:${(ti[1]/maxOut*100).toFixed(0)}%"></div></div></div></div>`).join('')}<button id="btn-show-all-items" class="w-full mt-3 py-2 rounded-lg border-2 border-red-300 text-red-600 text-xs font-700 hover:bg-red-50 transition">Lihat Semua</button></div>`}</div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4"><div class="bg-red-600 rounded-2xl border border-red-700 text-white p-5"><h3 class="font-700 text-sm mb-4 flex items-center gap-2"><i data-lucide="users" style="width:16px;height:16px;color:white"></i>Omset per Staff</h3>${userStats.length===0?'<p class="text-white/70 text-sm">Belum ada data</p>':`<div class="space-y-2">${userStats.map((us, idx) => `<button data-select-report-user="${us.name}" class="w-full text-left flex items-center justify-between p-3 ${idx % 2 === 0 ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} rounded-xl transition"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-700 text-white">${us.name[0].toUpperCase()}</div><div><div class="text-sm font-600">${us.name}</div><div class="text-xs text-white/70">${us.qty} item</div></div></div><div class="text-right"><div class="text-sm font-800">${formatCurrency(us.revenue)}</div></div></button>`).join('')}</div>`}</div><div class="bg-white rounded-2xl border border-gray-100 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4 flex items-center gap-2"><i data-lucide="pie-chart" style="width:16px;height:16px;color:#dc2626"></i>Distribusi Kategori</h3>${catStats.length===0?'<p class="text-gray-400 text-sm">Belum ada data</p>':`<div class="space-y-2">${catStats.map((cs,idx) => `<div class="flex items-center justify-between p-2.5 rounded-lg ${idx%2===0?'bg-red-50':'bg-white border border-gray-100'}"><span class="text-sm font-600 text-gray-700">${cs[0]}</span><span class="text-sm font-700 text-gray-800">${cs[1]} barang</span></div>`).join('')}</div>`}</div></div>${months.length>0?`<div class="bg-red-50 rounded-2xl border border-red-200 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4 flex items-center gap-2"><i data-lucide="calendar" style="width:16px;height:16px;color:#dc2626"></i>Tren Bulanan</h3><div class="space-y-2">${months.map((m,idx) => {const d = monthMap[m];return `<div class="flex items-center gap-4 p-2.5 rounded-lg ${idx%2===0?'bg-red-100 border border-red-200':'bg-white border border-gray-100'}"><span class="text-sm font-600 text-gray-700 w-20">${m}</span><span class="text-xs font-600 text-emerald-600">IN: ${d.in_qty}</span><span class="text-xs font-600 text-red-600">OUT: ${d.out_qty}</span></div>`;}).join('')}</div></div>`:''}</div>`;
+  return `<div class="fade-in space-y-6"><div><h2 class="text-2xl font-800 text-gray-800">Laporan</h2><p class="text-gray-500 text-sm mt-0.5">Insight operasional berbasis data</p></div><!-- Date Filter Minimalis 1 Baris --><div class="bg-gradient-to-r from-red-50 to-white rounded-xl border border-red-200 p-2.5 flex items-center gap-2"><div class="flex-1 min-w-0"><input id="report-date-start" type="date" value="${window.reportDateStart||''}" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:border-red-400" title="Dari tanggal"></div><span class="text-gray-400 text-xs font-500 px-1">–</span><div class="flex-1 min-w-0"><input id="report-date-end" type="date" value="${window.reportDateEnd||''}" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:border-red-400" title="Sampai tanggal"></div><button id="btn-clear-date-filter" class="px-3 py-1.5 rounded-lg border border-red-300 text-red-600 text-xs font-600 hover:bg-red-100 transition whitespace-nowrap bg-white">Bersihkan</button></div><div class="grid grid-cols-2 lg:grid-cols-4 gap-3"><div class="bg-red-600 rounded-2xl p-4 border border-red-700 text-center text-white"><div class="text-xs font-500 mb-1 text-white/80">Total Keluar</div><div class="text-2xl font-800">${outTxs.reduce((s,t)=>s+(t.qty||0),0)}</div></div><div class="bg-emerald-600 rounded-2xl p-4 border border-emerald-700 text-center text-white"><div class="text-xs font-500 mb-1 text-white/80">Total Masuk</div><div class="text-2xl font-800">${filteredTxs.filter(t=>t.tx_type==='IN').reduce((s,t)=>s+(t.qty||0),0)}</div></div><div class="bg-white rounded-2xl p-4 border border-gray-200 text-center"><div class="text-xs text-gray-600 font-500 mb-1">Estimasi Pengeluaran</div><div class="text-lg font-800 text-gray-800">${formatCurrency(estRevenue)}</div></div><div class="bg-blue-600 rounded-2xl p-4 border border-blue-700 text-center text-white"><div class="text-xs font-500 mb-1 text-white/80">Total Transaksi</div><div class="text-2xl font-800">${filteredTxs.length}</div></div></div><div class="bg-white rounded-2xl border border-gray-100 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4 flex items-center gap-2"><i data-lucide="trending-up" style="width:16px;height:16px;color:#dc2626"></i>Barang Terlaris (Keluar)</h3>${topItems.length===0?'<p class="text-gray-400 text-sm">Belum ada data</p>':`<div class="space-y-3">${topItems.map((ti,idx) => `<div class="flex items-center gap-3 p-3 rounded-xl ${idx % 2 === 0 ? 'bg-red-50 border border-red-200' : 'bg-white border border-gray-100'}"><span class="w-6 text-center text-xs font-800 ${idx===0?'text-red-600':'text-gray-400'}">${idx+1}</span><div class="flex-1"><div class="flex items-center justify-between mb-1"><span class="text-sm font-600 text-gray-800">${ti[0]}</span><span class="text-sm font-700 text-gray-600">${ti[1]}</span></div><div class="w-full bg-gray-100 rounded-full h-2"><div class="h-2 rounded-full ${idx===0?'bg-red-600':'bg-red-400'}" style="width:${(ti[1]/maxOut*100).toFixed(0)}%"></div></div></div></div>`).join('')}<button id="btn-show-all-items" class="w-full mt-3 py-2 rounded-lg border-2 border-red-300 text-red-600 text-xs font-700 hover:bg-red-50 transition">Lihat Semua</button></div>`}</div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4"><div class="bg-red-600 rounded-2xl border border-red-700 text-white p-5"><h3 class="font-700 text-sm mb-4 flex items-center gap-2"><i data-lucide="users" style="width:16px;height:16px;color:white"></i>Omset per Staff</h3>${userStats.length===0?'<p class="text-white/70 text-sm">Belum ada data</p>':`<div class="space-y-2">${userStats.map((us, idx) => `<button data-select-report-user="${us.name}" class="w-full text-left flex items-center justify-between p-3 ${idx % 2 === 0 ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} rounded-xl transition"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-700 text-white">${us.name[0].toUpperCase()}</div><div><div class="text-sm font-600">${us.name}</div><div class="text-xs text-white/70">${us.qty} item</div></div></div><div class="text-right"><div class="text-sm font-800">${formatCurrency(us.revenue)}</div></div></button>`).join('')}</div>`}</div><div class="bg-white rounded-2xl border border-gray-100 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4 flex items-center gap-2"><i data-lucide="pie-chart" style="width:16px;height:16px;color:#dc2626"></i>Distribusi Kategori</h3>${catStats.length===0?'<p class="text-gray-400 text-sm">Belum ada data</p>':`<div class="space-y-2">${catStats.map((cs,idx) => `<div class="flex items-center justify-between p-2.5 rounded-lg ${idx%2===0?'bg-red-50':'bg-white border border-gray-100'}"><span class="text-sm font-600 text-gray-700">${cs[0]}</span><span class="text-sm font-700 text-gray-800">${cs[1]} barang</span></div>`).join('')}</div>`}</div></div>${months.length>0?`<div class="bg-red-50 rounded-2xl border border-red-200 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4 flex items-center gap-2"><i data-lucide="calendar" style="width:16px;height:16px;color:#dc2626"></i>Tren Bulanan</h3><div class="space-y-2">${months.map((m,idx) => {const d = monthMap[m];return `<div class="flex items-center gap-4 p-2.5 rounded-lg ${idx%2===0?'bg-red-100 border border-red-200':'bg-white border border-gray-100'}"><span class="text-sm font-600 text-gray-700 w-20">${m}</span><span class="text-xs font-600 text-emerald-600">IN: ${d.in_qty}</span><span class="text-xs font-600 text-red-600">OUT: ${d.out_qty}</span></div>`;}).join('')}</div></div>`:''}</div>`;
 }
 
 // ── Users (Admin) ──
@@ -2030,12 +2048,12 @@ async function handleMainClick(e) {
       const itemId = btn.dataset.addTxItem;
       const item = getItems().find(i => i.__backendId === itemId);
       if (!item) { showToast('Barang tidak ditemukan', 'error'); return; }
-      if (window.txType === 'OUT' && item.stock <= 0) { showToast('Stok tidak tersedia', 'error'); return; }
+      if (window.txType === 'OUT' && itemUsesStock(item) && item.stock <= 0) { showToast('Stok tidak tersedia', 'error'); return; }
 
       const existing = window.txCart.findIndex(c => c.itemId === itemId);
       if (existing >= 0) {
         window.txCart[existing].qty += 1;
-        if (window.txType === 'OUT' && window.txCart[existing].qty > item.stock) {
+        if (window.txType === 'OUT' && itemUsesStock(item) && window.txCart[existing].qty > item.stock) {
           window.txCart[existing].qty -= 1;
           showToast('Stok tidak cukup! Tersisa: ' + item.stock, 'error');
           return;
@@ -2107,7 +2125,8 @@ async function handleMainClick(e) {
       const idx = parseInt(btn.dataset.qtyPlus);
       if (window.txCart[idx]) {
         const itemData = getItems().find(i => i.__backendId === window.txCart[idx].itemId);
-        if (window.txType === 'OUT' && window.txCart[idx].qty >= itemData.stock) {
+        if (!itemData) { showToast('Barang tidak ditemukan', 'error'); return; }
+        if (window.txType === 'OUT' && itemUsesStock(itemData) && window.txCart[idx].qty >= itemData.stock) {
           showToast('Stok tidak cukup! Tersisa: ' + itemData.stock, 'error');
           return;
         }
@@ -2147,17 +2166,22 @@ async function handleMainClick(e) {
           const item = getItems().find(i => i.__backendId === cartItem.itemId);
           if (!item) continue;
 
-          if (window.txType === 'OUT' && cartItem.qty > item.stock) {
+          const usesStock = itemUsesStock(item);
+          if (window.txType === 'OUT' && usesStock && cartItem.qty > item.stock) {
             errorCount++;
             continue;
           }
 
-          const stockBefore = item.stock;
-          const stockAfter = window.txType === 'IN' ? stockBefore + cartItem.qty : stockBefore - cartItem.qty;
-          const updatedItem = { ...item, stock: stockAfter };
+          const stockBefore = usesStock ? item.stock : 0;
+          const stockAfter = usesStock
+            ? (window.txType === 'IN' ? stockBefore + cartItem.qty : stockBefore - cartItem.qty)
+            : 0;
 
-          const r1 = await window.stockStore.update(updatedItem);
-          if (!r1.isOk) { errorCount++; continue; }
+          if (usesStock) {
+            const updatedItem = { ...item, stock: stockAfter };
+            const r1 = await window.stockStore.update(updatedItem);
+            if (!r1.isOk) { errorCount++; continue; }
+          }
 
           const r2 = await window.stockStore.create({
             type: 'tx', name: item.name, category: item.category || '', price: item.price || 0, stock: 0, min_stock: 0, pin: '', role: '',
@@ -2306,15 +2330,16 @@ function bindFormHandlers() {
       const name = document.getElementById('fi-name').value.trim();
       const category = document.getElementById('fi-cat')?.value.trim() || '';
       const price = parseInt(document.getElementById('fi-price').value) || 0;
-      const stock = parseInt(document.getElementById('fi-stock').value) || 0;
-      const min_stock = parseInt(document.getElementById('fi-min').value) || 5;
+      const tracks_stock = document.getElementById('fi-tracks-stock')?.checked !== false;
+      const stock = tracks_stock ? (parseInt(document.getElementById('fi-stock').value) || 0) : 0;
+      const min_stock = tracks_stock ? (parseInt(document.getElementById('fi-min').value) || 5) : 0;
       if (!name) { showToast('Nama barang wajib', 'error'); return; }
       const btn = document.getElementById('btn-save-item');
       btn.disabled = true;
       const originalText = btn.textContent;
       btn.textContent = 'Menyimpan...';
       if (window.editingItem) {
-        const updated = { ...window.editingItem, name, category, price, stock, min_stock };
+        const updated = { ...window.editingItem, name, category, price, tracks_stock, stock, min_stock };
         const r = await window.stockStore.update(updated);
         if (r.isOk) {
           const status = await window.stockStore.syncAfterWrite();
@@ -2325,7 +2350,7 @@ function bindFormHandlers() {
         }
         else { showToast('Gagal memperbarui', 'error'); btn.disabled = false; btn.textContent = originalText; }
       } else {
-        const r = await window.stockStore.create({ type: 'item', name, category, price, stock, min_stock });
+        const r = await window.stockStore.create({ type: 'item', name, category, price, tracks_stock, stock, min_stock });
         if (r.isOk) {
           const status = await window.stockStore.syncAfterWrite();
           window.showItemForm = false;
@@ -2432,6 +2457,23 @@ function bindInputHandlers() {
       options.querySelectorAll('[data-cat-option]').forEach(option => {
         const value = option.dataset.catOption.toLowerCase();
         option.classList.toggle('hidden', Boolean(term) && !value.includes(term));
+      });
+    };
+  }
+
+  const tracksStockInput = document.getElementById('fi-tracks-stock');
+  if (tracksStockInput && !tracksStockInput.dataset.bound) {
+    tracksStockInput.dataset.bound = 'true';
+    tracksStockInput.onchange = (e) => {
+      const enabled = e.target.checked;
+      document.getElementById('stock-fields')?.classList.toggle('opacity-50', !enabled);
+      ['fi-stock', 'fi-min'].forEach(id => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.disabled = !enabled;
+        input.required = enabled;
+        if (!enabled) input.value = '0';
+        if (enabled && id === 'fi-min' && input.value === '0') input.value = '5';
       });
     };
   }
