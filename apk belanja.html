@@ -1,0 +1,2485 @@
+
+<!doctype html>
+<html lang="id" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengeluaran Toko</title><!-- Tailwind CSS untuk styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+  const API_BASE = 'https://script.google.com/macros/s/AKfycbwptyGe3NGhzRNOXyyOESS2dzLB1waIm896pT38ngB8uajGZb-DVQ98X1ZUcVhRhh8yMQ/exec';
+</script>
+
+  <style>
+    /* ============================================
+     * CUSTOM CSS STYLES
+     * ============================================ */
+    
+    /* Box sizing untuk semua element */
+    body {
+      box-sizing: border-box;
+    }
+    
+    /* Animasi untuk toast notification - muncul dari tengah */
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -40%);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+      }
+    }
+    
+    /* Animasi untuk toast notification - hilang ke tengah */
+    @keyframes slideDown {
+      from {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+      }
+      to {
+        opacity: 0;
+        transform: translate(-50%, -40%);
+      }
+    }
+    
+    /* Class untuk menampilkan toast */
+    .toast-show {
+      animation: slideUp 0.3s ease-out forwards;
+    }
+    
+    /* Class untuk menyembunyikan toast */
+    .toast-hide {
+      animation: slideDown 0.3s ease-out forwards;
+    }
+
+    #backButton,
+    #backToDraftButton,
+    #backFromAdmin {
+      display: none !important;
+    }
+
+    #formPage header,
+    #draftPage header,
+    #adminPage header {
+      gap: 0 !important;
+    }
+  </style>
+
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="bg-gradient-to-br from-red-50 to-red-200 min-h-screen">
+  <div id="app" class="w-full">
+
+<!-- HOME PAGE -->
+   <div id="homePage" class="max-w-2xl mx-auto p-6">
+    <header class="mb-8">
+     <div class="bg-white rounded-3xl shadow-2xl p-8 text-center relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-red-100 rounded-full -mr-16 -mt-16 opacity-50"></div>
+      <div class="absolute bottom-0 left-0 w-24 h-24 bg-red-100 rounded-full -ml-12 -mb-12 opacity-50"></div>
+      <div class="relative z-10">
+       <div class="w-20 h-20 bg-gradient-to-br from-red-500 to-red-700 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg transform rotate-3">
+        <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+       </div>
+       <h1 id="homeTitle" class="text-3xl font-bold text-gray-800 mb-2">Belanja Pizzain</h1>
+       <p class="text-gray-500 text-sm">Pizzain Spread Management App</p>
+      </div>
+     </div>
+    </header>
+    <div class="grid grid-cols-1 gap-4 mb-4"><button id="btnCatatPengeluaran" class="group bg-gradient-to-br from-red-500 to-red-600 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98]">
+      <div class="flex items-center gap-4">
+       <div class="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+        <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+       </div>
+       <div class="flex-1 text-left">
+        <h3 class="text-white font-bold text-xl mb-1">Catat Pengeluaran</h3>
+        <p class="text-red-100 text-sm">Tambah pengeluaran baru</p>
+       </div>
+       <svg class="w-6 h-6 text-white opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+       </svg>
+      </div></button>
+    </div>
+    <div class="grid grid-cols-2 gap-4"><button id="btnDraftPengeluaran" class="group bg-white rounded-3xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
+      <div class="text-center">
+       <div class="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-500 rounded-2xl mx-auto mb-3 flex items-center justify-center group-hover:scale-110 transition-transform shadow-md">
+        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+       </div>
+       <h3 class="text-gray-800 font-bold text-base mb-1">Draft</h3>
+       <p class="text-gray-500 text-xs">Penyimpanan</p>
+      </div></button> <button id="btnAdmin" class="group bg-white rounded-3xl p-6 shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
+      <div class="text-center">
+       <div class="w-14 h-14 bg-gradient-to-br from-gray-700 to-gray-900 rounded-2xl mx-auto mb-3 flex items-center justify-center group-hover:scale-110 transition-transform shadow-md">
+        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+       </div>
+       <h3 class="text-gray-800 font-bold text-base mb-1">Admin</h3>
+       <p class="text-gray-500 text-xs">Lihat laporan</p>
+      </div></button>
+    </div>
+   </div><!-- PIN POPUP -->
+   <div id="pinPopup" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+     <div class="text-center mb-6">
+      <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+       <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+       </svg>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-800 mb-2">Akses Admin</h2>
+      <p class="text-gray-600">Masukkan PIN untuk melanjutkan</p>
+     </div><input type="password" id="pinInput" class="w-full px-4 py-4 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-red-500 focus:outline-none mb-2" placeholder="••••" maxlength="4">
+     <p id="pinError" class="hidden text-red-600 text-sm mb-4 text-center">❌ PIN salah! Coba lagi.</p>
+     <div class="grid grid-cols-2 gap-3"><button id="btnCancelPin" class="py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"> Batal </button> <button id="btnSubmitPin"
+  class="py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
+  
+  <span id="btnPinText">Masuk</span>
+
+  <svg id="btnPinSpinner"
+    class="hidden w-5 h-5 animate-spin"
+    fill="none" viewBox="0 0 24 24">
+    <circle class="opacity-25" cx="12" cy="12" r="10"
+      stroke="currentColor" stroke-width="4"></circle>
+    <path class="opacity-75" fill="currentColor"
+      d="M4 12a8 8 0 018-8V0
+         C5.373 0 0 5.373 0 12h4z"/>
+  </svg>
+
+</button>
+
+     </div>
+    </div>
+   </div><!-- FORM PAGE -->
+   <div id="formPage" class="hidden max-w-2xl mx-auto p-6">
+    <header class="mb-6 flex items-center gap-4"><button id="backButton" class="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center text-red-600 hover:bg-red-50 transition-colors" aria-label="Kembali">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg></button>
+     <h1 id="pageTitle" class="text-2xl font-bold text-red-900">Catat Pengeluaran</h1>
+    </header>
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+     <div class="mb-6"><label for="tempatBelanja" class="block text-sm font-semibold text-gray-700 mb-2">Tempat Belanja</label> <div class="relative">
+  <input type="text" id="tempatBelanja"
+    autocomplete="off"
+    class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-red-500 focus:outline-none transition-colors"
+    placeholder="Contoh: Tempat Belanja">
+
+  <div id="suggestTempat"
+    class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-56 overflow-y-auto">
+  </div>
+</div>
+
+     <div class="grid grid-cols-12 gap-3 mt-4 mb-3">
+
+  <!-- Nama Barang -->
+  <div class="col-span-5">
+    <label class="block text-sm font-medium text-gray-600 mb-1">Nama Barang</label>
+    <div class="relative">
+      <input type="text" id="namaBarang"
+        autocomplete="off"
+        class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-red-500 focus:outline-none"
+        placeholder="Gula">
+
+      <div id="suggestBarang"
+        class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-56 overflow-y-auto">
+      </div>
+    </div>
+  </div>
+
+  <!-- Jumlah -->
+  <div class="col-span-3">
+    <label class="block text-sm font-medium text-gray-600 mb-1">Jumlah</label>
+    <input type="number" id="jumlahBarang"
+      class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-red-500 focus:outline-none"
+      value="1" min="1">
+  </div>
+
+  <!-- Harga -->
+  <div class="col-span-4">
+    <label class="block text-sm font-medium text-gray-600 mb-1">Harga@</label>
+    <input type="number" id="hargaBarang"
+      class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-red-500 focus:outline-none"
+      placeholder="10000">
+  </div>
+
+</div>
+
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-4">
+  <!-- OPERASIONAL (KIRI) -->
+  <button id="addOperasionalButton"
+    class="py-2.5 bg-red-600 text-white rounded-lg font-medium">
+    + Operasional
+  </button>
+
+  <!-- BELANJA BAHAN (KANAN) -->
+  <button id="addItemButton"
+    class="py-2.5 bg-red-600 text-white rounded-lg font-medium">
+    + Bahan Baku
+  </button>
+</div>
+
+
+     <!-- BELANJA BAHAN -->
+<div
+  id="itemListContainer"
+  class="mb-4 hidden bg-gray-100 border border-gray-200 rounded-lg p-3"
+>
+  <h3 class="font-semibold text-gray-700 mb-2">
+    Belanja Bahan
+  </h3>
+
+  <div id="itemList" class="space-y-1"></div>
+</div>
+
+<!-- OPERASIONAL -->
+<div
+  id="operasionalListContainer"
+  class="mb-6 hidden bg-gray-100 border border-gray-200 rounded-lg p-3"
+>
+  <h3 class="font-semibold text-gray-700 mb-2">
+    Operasional
+  </h3>
+
+  <div id="operasionalList" class="space-y-1"></div>
+</div>
+
+     <div class="mb-6">
+  <label class="block text-sm font-semibold text-gray-700 mb-2">Foto Bukti</label>
+
+  <!-- Tombol buka kamera -->
+  <button
+    id="openCameraBtn"
+    class="w-full py-3 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-3"
+  >
+    <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+    </svg>
+    <span class="text-gray-600 font-medium">Ambil Foto</span>
+  </button>
+
+  <!-- Area kamera -->
+  <div id="cameraWrap" class="hidden mt-3">
+  <div class="w-full aspect-[9/16] overflow-hidden rounded-xl">
+    <video
+      id="cameraVideo"
+      autoplay
+      playsinline
+      class="w-full h-full object-cover">
+    </video>
+  </div>
+
+  <button
+    id="captureBtn"
+    class="w-full mt-2 py-2 bg-red-600 text-white rounded-lg">
+    Ambil Foto
+  </button>
+</div>
+
+
+  <!-- Spinner (TETAP DIPAKAI) -->
+  <div id="uploadSpinner" class="hidden mt-3 flex items-center justify-center gap-2 text-red-600">
+    <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+    </svg>
+    <span class="text-sm">Mengupload...</span>
+  </div>
+      <div id="photoPreview" class="hidden mt-3">
+  <img
+    id="previewImage"
+    class="w-full object-cover rounded-xl border-2 border-gray-200"
+    alt="Preview foto">
+</div>
+</div>
+     </div>
+     <div class="grid grid-cols-2 gap-3"><button id="submitButton" class="py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"> <span id="submitButtonText">SUBMIT</span> </button> <button id="draftButton" class="py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"> <span id="draftButtonText">SIMPAN DRAFT</span> </button>
+     </div>
+    </div>
+   </div><!-- DRAFT PAGE -->
+   <div id="draftPage" class="hidden max-w-2xl mx-auto p-6">
+    <header class="mb-6 flex items-center gap-4"><button id="backToDraftButton" class="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center text-red-600 hover:bg-red-50 transition-colors" aria-label="Kembali">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg></button>
+     <h1 id="draftPageTitle" class="text-2xl font-bold text-red-900">Draft Pengeluaran</h1>
+    </header>
+    <div id="emptyDraftState" class="bg-white rounded-2xl shadow-lg p-12 text-center">
+     <svg class="w-24 h-24 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+     </svg>
+     <p id="emptyDraftText" class="text-gray-500 text-lg">Belum ada draft pengeluaran.</p>
+    </div>
+    <div id="draftCardsContainer" class="space-y-4"></div>
+   </div><!-- ADMIN PAGE -->
+   <div id="adminPage" class="hidden max-w-2xl mx-auto p-6">
+
+
+    <header class="mb-6 flex items-center gap-4"><button id="backFromAdmin" class="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center text-red-600 hover:bg-red-50 transition-colors" aria-label="Kembali">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg></button>
+     <h1 class="text-2xl font-bold text-red-900">Laporan Admin</h1>
+    </header>
+
+    <div class="mt-6 mb-3"><!-- Search Container -->
+   <div class="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all"><!-- Header Search -->
+    <div class="flex items-center gap-3 mb-4">
+     <div class="bg-gradient-to-r from-red-500 to-red-600 p-2 rounded-lg shadow-md">
+      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+     </div>
+     <div>
+      <h3 class="text-lg font-bold text-gray-800">Pencarian Transaksi</h3>
+      <p class="text-sm text-gray-600">Cari berdasarkan tempat atau barang</p>
+     </div>
+    </div><!-- Input Search -->
+    <div class="relative group">
+     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+      <svg class="w-6 h-6 text-red-400 group-focus-within:text-red-600 transition-colors" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+     </div><input
+  type="text"
+  id="adminSearchInput"
+  placeholder="Ketik nama tempat belanja atau nama barang..."
+  class="w-full pl-14 pr-12 py-3 text-lg
+       border-2 border-gray-200 rounded-xl
+       bg-white
+       focus:border-red-500 focus:outline-none
+       transition-colors
+       placeholder-gray-400 font-medium"
+>
+
+<button
+  id="clearAdminSearchBtn"
+  class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-red-600 transition-colors hidden">
+
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg></button>
+
+          <!-- ADMIN SUGGESTION BOX -->
+<div id="adminSuggestBox"
+     class="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-2 hidden max-h-60 overflow-y-auto">
+</div>
+    </div>
+
+
+
+   </div><!-- Search Result Info -->
+   <div id="adminSearchResultInfo" class="mt-3 hidden">
+  <div class="bg-red-100 border-l-4 border-red-500 p-3 rounded-lg shadow-md">
+    <p class="text-sm font-semibold text-red-800">
+      <span id="adminSearchResultText"></span>
+    </p>
+  </div>
+</div>
+  </div>
+
+    <div class="bg-white rounded-2xl shadow-lg p-5 mb-3">
+     <div class="flex items-center gap-2 mb-4">
+      <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg><label class="text-sm font-semibold text-gray-700">Pilih Periode</label>
+     </div>
+     <div class="grid grid-cols-2 gap-3 mb-4">
+      <div><label class="block text-xs text-gray-600 mb-1">Tanggal Awal</label> <input type="date" id="startDateSelector" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none transition-colors">
+      </div>
+      <div><label class="block text-xs text-gray-600 mb-1">Tanggal Akhir</label> <input type="date" id="endDateSelector" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:outline-none transition-colors">
+      </div>
+     </div><button id="btnLoadReport" class="w-full px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg><span>Tampilkan Laporan</span> </button>
+    </div>
+
+    <div id="reportViewContainer" class="space-y-6">
+     <div id="periodInfo" class="bg-gradient-to-r from-red-500 to-red-600 rounded-2xl p-5 text-white shadow-lg">
+      <div class="flex items-center justify-between">
+       <div>
+        <div class="flex items-center gap-2 mb-2">
+         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+         </svg><span id="periodLabel" class="text-sm opacity-90">Pengeluaran Periode</span>
+        </div>
+        <p id="periodTotalAmount" class="text-3xl font-bold">Rp 0</p>
+       </div>
+       <div class="text-right">
+        <div class="bg-white bg-opacity-20 rounded-xl px-4 py-2">
+         <p class="text-xs opacity-90 mb-1">Transaksi</p>
+         <p id="periodTotalTransactions" class="text-2xl font-bold">0</p>
+        </div>
+       </div>
+      </div>
+     </div>
+
+      <div id="reportViewContainer" class="space-y-6">
+     <div id="bahanInfo" class="bg-gradient-to-r from-red-500 to-red-600 rounded-2xl p-5 text-white shadow-lg">
+      <div class="flex items-center justify-between">
+       <div>
+        <div class="flex items-center gap-2 mb-2">
+         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+         </svg><span class="text-sm opacity-90">Pengeluaran Bahan Baku</span>
+        </div>
+        <p id="bahanTotalAmount" class="text-3xl font-bold">Rp 0</p>
+       </div>
+       <div class="text-right">
+        <div class="bg-white bg-opacity-20 rounded-xl px-4 py-2">
+         <p class="text-xs opacity-90 mb-1">Item</p>
+         <p id="bahanTotalTransactions" class="text-2xl font-bold">0</p>
+        </div>
+       </div>
+      </div>
+     </div>
+
+        <div id="reportViewContainer" class="space-y-6">
+     <div id="operasionalInfo" class="bg-gradient-to-r from-red-500 to-red-600 rounded-2xl p-5 text-white shadow-lg">
+      <div class="flex items-center justify-between">
+       <div>
+        <div class="flex items-center gap-2 mb-2">
+         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+         </svg><span class="text-sm opacity-90">Pengeluaran Operasional</span>
+        </div>
+        <p id="operasionalTotalAmount" class="text-3xl font-bold">Rp 0</p>
+       </div>
+       <div class="text-right">
+        <div class="bg-white bg-opacity-20 rounded-xl px-4 py-2">
+         <p class="text-xs opacity-90 mb-1">Item</p>
+         <p id="operasionalTotalTransactions" class="text-2xl font-bold">0</p>
+        </div>
+       </div>
+      </div>
+     </div>
+         
+     <div id="chartContainer" class="hidden bg-white rounded-2xl shadow-lg p-5">
+      <div class="flex items-center gap-2 mb-4">
+       <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+       </svg>
+       <h3 class="text-lg font-bold text-gray-800">Grafik Pengeluaran Harian</h3>
+      </div>
+      <div id="chartCanvas" class="w-full" style="height: 280px;"></div>
+     </div>
+     <div class="bg-white rounded-2xl shadow-lg p-5">
+      <div class="flex items-center gap-2 mb-4">
+       <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+       </svg>
+       <h3 class="text-lg font-bold text-gray-800">Detail Transaksi</h3>
+      </div>
+      <div id="transactionsList" class="space-y-3"></div>
+      <div id="emptyState" class="hidden text-center py-8">
+       <svg class="w-16 h-16 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+       </svg>
+       <p class="text-gray-500">Tidak ada transaksi pada periode ini</p>
+      </div>
+     </div>
+    </div>
+   </div>
+     </div>
+
+</div>
+     <!-- TOAST NOTIFICATION -->
+   <div id="toast" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+    <div class="bg-white rounded-2xl shadow-2xl border-l-4 p-5 min-w-[320px] max-w-md">
+     <div class="flex items-center gap-4">
+      <div id="toastIcon" class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"></div>
+      <div class="flex-1">
+       <p id="toastMessage" class="text-gray-800 font-semibold text-base leading-relaxed"></p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    // Variabel Global
+    // Variabel Global
+let items = [];          // BAHAN BAKU (lama, jangan dihapus)
+let operasional = [];    // 🆕 OPERASIONAL
+let currentPhoto = null;
+    let currentPhotoFileId = null;
+    let allData = [];
+    let currentPage = 'home';
+    let currentDraftId = null;
+    let startDate = null;
+    let endDate = null;
+    let cacheTempatBelanja = [];
+    let cacheNamaBarang = [];
+    let allPeriodTransactions = [];
+    let currentSearchKeyword = '';
+    let adminSuggestions = { tempat: [], barang: [] };
+
+
+const adminInput = document.getElementById('adminSearchInput');
+const adminSuggestBox = document.getElementById('adminSuggestBox');
+const clearBtn = document.getElementById('clearAdminSearchBtn');
+
+
+    let searchTimer;
+adminInput.addEventListener('input', function () {
+  clearTimeout(searchTimer);
+  const value = this.value;
+
+  searchTimer = setTimeout(() => {
+    handleAdminSearch(value);
+  }, 150);
+});
+
+
+clearBtn.addEventListener('click', function () {
+  adminInput.value = '';
+  adminSuggestBox.classList.add('hidden');
+  this.classList.add('hidden');
+  filterTransactions('');
+});
+
+   function setAdminLoading(isLoading) {
+  const btn = document.getElementById('btnSubmitPin');
+  const text = document.getElementById('btnPinText');
+  const spinner = document.getElementById('btnPinSpinner');
+
+  if (isLoading) {
+    btn.disabled = true;
+    btn.classList.add('opacity-80', 'cursor-not-allowed');
+    text.textContent = 'Verifikasi...';
+    spinner.classList.remove('hidden');
+  } else {
+    btn.disabled = false;
+    btn.classList.remove('opacity-80', 'cursor-not-allowed');
+    text.textContent = 'Masuk';
+    spinner.classList.add('hidden');
+  }
+}
+
+function normalizeDriveImage(url) {
+  if (!url) return '';
+
+  // Ambil fileId dari format lama: uc?export=view&id=...
+  const m = url.match(/[?&]id=([^&]+)/);
+  if (m && m[1]) {
+    return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1000';
+  }
+
+  return url;
+}
+
+function renderPhotoPreview(url) {
+  const box = document.getElementById('photoPreview');
+  if (!box || !url) return;
+
+  box.innerHTML = '';
+  box.classList.remove('hidden');
+
+  const img = document.createElement('img');
+  img.src = normalizeDriveImage(url);
+  img.referrerPolicy = 'no-referrer';
+  img.alt = 'Preview foto';
+  img.className = 'w-full object-cover rounded-xl border-2 border-gray-200';
+  img.onerror = () => {
+    box.innerHTML = '<div style="color:#999">Gagal memuat foto</div>';
+  };
+
+  box.appendChild(img);
+}
+
+/* ===========================
+    FILTER & RENDER
+   =========================== */
+
+function filterSuggestions(list, keyword, limit = 8) {
+  const q = keyword.toLowerCase();
+  return list
+    .filter(v => v.toLowerCase().includes(q))
+    .slice(0, limit);
+}
+
+function renderSuggestion(boxId, items, onSelect) {
+  const box = document.getElementById(boxId);
+  if (!box) return;
+
+  if (!items.length) {
+    box.classList.add('hidden');
+    return;
+  }
+
+  box.innerHTML = items.map(v => {
+    const safe = v.replace(/'/g, "\\'");
+    return `
+      <div
+        class="px-4 py-2 cursor-pointer hover:bg-red-50 text-sm"
+        onmousedown="event.preventDefault()"
+        onclick="${onSelect}('${safe}')"
+      >
+        ${v}
+      </div>
+    `;
+  }).join('');
+
+  box.classList.remove('hidden');
+}
+
+    /**
+     * ============================================
+     * TOAST NOTIFICATION
+     * ============================================
+     */
+    function showToast(message, type) {
+      type = type || 'success';
+      
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      const toastIcon = document.getElementById('toastIcon');
+      const toastContainer = document.querySelector('#toast > div');
+      
+      toastMessage.textContent = message;
+      
+      if (type === 'success') {
+        toastIcon.innerHTML = `
+          <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+        `;
+        toastIcon.style.backgroundColor = '#10B981';
+        toastContainer.style.borderLeftColor = '#10B981';
+      } else if (type === 'error') {
+        toastIcon.innerHTML = `
+          <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        `;
+        toastIcon.style.backgroundColor = '#EF4444';
+        toastContainer.style.borderLeftColor = '#EF4444';
+      } else if (type === 'info') {
+        toastIcon.innerHTML = `
+          <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        `;
+        toastIcon.style.backgroundColor = '#3B82F6';
+        toastContainer.style.borderLeftColor = '#3B82F6';
+      } else if (type === 'warning') {
+        toastIcon.innerHTML = `
+          <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        `;
+        toastIcon.style.backgroundColor = '#F59E0B';
+        toastContainer.style.borderLeftColor = '#F59E0B';
+      }
+      toast.style.opacity = "1";
+      toast.classList.remove('hidden');
+      toast.classList.add('toast-show');
+      
+      setTimeout(function() {
+        toast.classList.remove('toast-show');
+        toast.classList.add('toast-hide');
+        setTimeout(function() {
+          toast.classList.add('hidden');
+          toast.classList.remove('toast-hide');
+        }, 300);
+      }, 3000);
+    }
+
+   // ============================================
+// SPA ROUTER (HISTORY SUPPORT)
+// ============================================
+function navigate(page, push = true) {
+  showPage(page);
+
+  if (push) {
+    history.pushState(
+      { page },
+      '',
+      '#' + page
+    );
+  }
+}
+
+    /**
+     * ============================================
+     * NAVIGASI
+     * ============================================
+     */
+    function showPage(page) {
+  currentPage = page;
+
+  const pages = ['homePage', 'formPage', 'draftPage', 'adminPage'];
+
+  pages.forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.add('hidden');
+    el.style.display = 'none';
+  });
+
+  const targetMap = {
+    home: 'homePage',
+    form: 'formPage',
+    draft: 'draftPage',
+    admin: 'adminPage'
+  };
+
+  const target = document.getElementById(targetMap[page]);
+  if (target) {
+    target.classList.remove('hidden');
+    target.style.display = 'block';
+  }
+
+  if (page === 'draft') {
+    loadAllDrafts();
+  }
+
+  window.scrollTo(0, 0);
+}
+
+window.addEventListener('popstate', function (event) {
+  const page = event.state?.page || 'home';
+  navigate(page, false); // ⛔ JANGAN pushState lagi
+});
+
+    /**
+     * ============================================
+     * PIN ADMIN
+     * ============================================
+     */
+    function showPinPopup() {
+      document.getElementById('pinPopup').classList.remove('hidden');
+      document.getElementById('pinInput').value = '';
+      document.getElementById('pinError').classList.add('hidden');
+      setTimeout(function() {
+        document.getElementById('pinInput').focus();
+      }, 100);
+    }
+
+    function hidePinPopup() {
+      document.getElementById('pinPopup').classList.add('hidden');
+    }
+
+    function verifyPin() {
+  const enteredPin = document.getElementById('pinInput').value;
+
+  if (!enteredPin) return;
+
+  setAdminLoading(true); // 🔥 START ANIMASI
+
+  const fd = new FormData();
+  fd.append('action', 'verifyAdminPin');
+  fd.append('pin', enteredPin);
+
+  fetch(API_BASE, {
+    method: 'POST',
+    body: fd
+  })
+    .then(res => res.json())
+    .then(result => {
+      setAdminLoading(false); // 🔥 STOP ANIMASI
+
+      if (result.success) {
+        hidePinPopup();
+        navigate('admin');
+        showToast('Akses admin berhasil!', 'success');
+      } else {
+        document.getElementById('pinError').classList.remove('hidden');
+        document.getElementById('pinInput').value = '';
+        document.getElementById('pinInput').focus();
+      }
+    })
+    .catch(error => {
+      setAdminLoading(false); // 🔥 PASTI BERHENTI
+      showToast('Error: ' + error, 'error');
+    });
+}
+
+
+
+    /**
+     * ============================================
+     * DRAFT FUNCTIONS
+     * ============================================
+     */
+    function loadAllDrafts() {
+  const fd = new FormData();
+  fd.append('action', 'getAllTransaksi');
+  fd.append('status', 'draft');
+
+  fetch(API_BASE, {
+    method: 'POST',
+    body: fd
+  })
+    .then(res => res.json())
+    .then(data => {
+      allData = data;
+      renderDraftCards();
+    })
+    .catch(error => {
+      showToast('Error loading drafts: ' + error, 'error');
+    });
+}
+
+
+    function renderDraftCards() {
+  const drafts = Array.isArray(allData) ? allData : [];
+  const container = document.getElementById('draftCardsContainer');
+  const emptyState = document.getElementById('emptyDraftState');
+
+   drafts.sort((a, b) => {
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  if (drafts.length === 0) {
+    container.innerHTML = '';
+    emptyState.classList.remove('hidden');
+    return;
+  }
+
+  emptyState.classList.add('hidden');
+  container.innerHTML = '';
+
+      drafts.forEach(function(draft) {
+        const itemsArray = draft.items ? JSON.parse(draft.items) : [];
+        
+        const dateObj = new Date(draft.created_at);
+        const tanggal = dateObj.toLocaleDateString('id-ID', { 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        });
+        const waktu = dateObj.toLocaleTimeString('id-ID', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-2xl shadow-lg p-5';
+
+        card.innerHTML = `
+          <div class="relative">
+            <button 
+              class="absolute -top-2 -right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110 z-10 delete-draft-btn"
+              data-delete-id="${draft.id}"
+              aria-label="Hapus draft"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+            
+            <div class="mb-4">
+              <div class="flex items-center gap-2 mb-2">
+                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <p class="text-lg font-bold text-gray-800">${draft.tempat_belanja}</p>
+              </div>
+              <div class="flex items-center gap-2 mb-3">
+                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span class="text-gray-700 text-sm">${tanggal}</span>
+                <svg class="w-4 h-4 text-red-600 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="text-gray-700 text-sm">${waktu}</span>
+              </div>
+            </div>
+            
+            <button 
+              class="w-full py-3 bg-red-600 rounded-lg font-semibold text-white transition-colors hover:bg-red-700 complete-draft-btn"
+              data-draft-id="${draft.id}"
+            >
+              LENGKAPI
+            </button>
+          </div>
+        `;
+
+        card.querySelector('.complete-draft-btn').addEventListener('click', function(e) {
+          e.stopPropagation();
+          loadDraftToForm(draft);
+        });
+
+        const deleteBtn = card.querySelector('.delete-draft-btn');
+        deleteBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const draftId = e.currentTarget.dataset.deleteId;
+          
+          const originalHTML = deleteBtn.innerHTML;
+          
+          deleteBtn.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+          `;
+          deleteBtn.classList.add('animate-pulse');
+          
+          const confirmMsg = document.createElement('div');
+          confirmMsg.className = 'absolute -top-12 right-0 bg-gray-800 text-white text-xs px-3 py-2 rounded-lg shadow-lg whitespace-nowrap';
+          confirmMsg.textContent = 'Klik lagi untuk hapus';
+          deleteBtn.parentElement.appendChild(confirmMsg);
+          
+          const timeout = setTimeout(function() {
+            deleteBtn.innerHTML = originalHTML;
+            deleteBtn.classList.remove('animate-pulse');
+            confirmMsg.remove();
+            deleteBtn.dataset.confirmed = '';
+          }, 3000);
+          
+          deleteBtn.dataset.confirmed = 'pending';
+          deleteBtn.dataset.timeoutId = timeout;
+          
+          if (deleteBtn.dataset.confirmed === 'pending' && e.detail > 1) {
+            clearTimeout(timeout);
+            deleteDraftById(draftId);
+          }
+        });
+
+        deleteBtn.addEventListener('dblclick', function(e) {
+          e.stopPropagation();
+          const draftId = e.currentTarget.dataset.deleteId;
+          deleteDraftById(draftId);
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+function removeDraftFromList(draftId) {
+  allData = allData.filter(d => d.id !== draftId);
+  renderDraftCards();
+}
+
+ function deleteDraftById(draftId) {
+
+  removeDraftFromList(draftId);
+
+  const fd = new FormData();
+  fd.append('action', 'deleteTransaksi');
+  fd.append('id', draftId);
+
+  fetch(API_BASE, {
+    method: 'POST',
+    body: fd
+  })
+    .then(res => res.json())
+    .then(result => {
+      if (result.success) {
+        showToast('Draft berhasil dihapus!', 'success');
+      } else {
+        showToast(result.message, 'error');
+        loadAllDrafts();
+      }
+    })
+    .catch(error => {
+      showToast('Error: ' + error, 'error');
+      loadAllDrafts();
+    });
+}
+
+
+    function loadDraftToForm(draft) {
+  currentDraftId = draft.id;
+
+if (draft.status !== 'draft') {
+  showToast('Draft ini sudah disubmit', 'warning');
+  return;
+}
+
+  document.getElementById('tempatBelanja').value = draft.tempat_belanja;
+
+  // =====================
+  // BAHAN BAKU
+  // =====================
+  items = draft.items ? JSON.parse(draft.items) : [];
+  if (items.length > 0) {
+    renderList(items, 'itemList', 'itemListContainer');
+  }
+
+  // =====================
+  // 🔥 OPERASIONAL (INI FIX-NYA)
+  // =====================
+  try {
+    operasional = draft.operasional
+      ? JSON.parse(draft.operasional)
+      : [];
+  } catch (e) {
+    operasional = [];
+  }
+
+  if (operasional.length > 0) {
+    renderList(operasional, 'operasionalList', 'operasionalListContainer');
+  }
+
+  // =====================
+  // FOTO
+  // =====================
+  if (draft.foto_url) {
+    currentPhoto = draft.foto_url;
+    currentPhotoFileId = draft.foto_file_id;
+    renderPhotoPreview(normalizeDriveImage(draft.foto_url));
+  }
+
+  navigate('form');
+}
+
+    /**
+     * ============================================
+     * FORM - MANAGE ITEMS
+     * ============================================
+     */
+    function addItemToList(type) {
+  const nama = document.getElementById('namaBarang').value.trim();
+  const qty = parseInt(document.getElementById('jumlahBarang').value);
+  const harga = parseInt(document.getElementById('hargaBarang').value);
+
+  if (!nama || !qty || !harga) {
+    showToast('Lengkapi data barang', 'warning');
+    return;
+  }
+
+  const row = [nama, qty, harga, qty * harga];
+
+  if (type === 'bahan') {
+    items.push(row);
+    renderList(items, 'itemList', 'itemListContainer');
+  } else {
+    operasional.push(row);
+    renderList(operasional, 'operasionalList', 'operasionalListContainer');
+  }
+
+  // reset input
+  document.getElementById('namaBarang').value = '';
+  document.getElementById('jumlahBarang').value = '1';
+  document.getElementById('hargaBarang').value = '';
+}
+
+function renderList(arr, listId, containerId) {
+  const list = document.getElementById(listId);
+  const container = document.getElementById(containerId);
+
+  list.innerHTML = '';
+
+  arr.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className =
+  'flex justify-between items-center px-2 py-1.5 border-b border-gray-200 last:border-b-0 hover:bg-gray-200/50';
+
+
+    row.innerHTML = `
+      <div>
+        <div class="font-medium">${i + 1}. ${item[0]}</div>
+        <div class="text-[12px] text-gray-500 leading-tight">
+          ${item[1]}x @ Rp ${item[2].toLocaleString('id-ID')}
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div class="font-semibold">
+          Rp ${item[3].toLocaleString('id-ID')}
+        </div>
+
+        <button
+          class="text-red-500 hover:text-red-700 text-lg font-bold"
+          aria-label="Hapus item"
+        >
+          ×
+        </button>
+      </div>
+    `;
+
+    // 🔥 EVENT HAPUS
+    row.querySelector('button').addEventListener('click', () => {
+      arr.splice(i, 1);
+      renderList(arr, listId, containerId);
+
+      if (arr.length === 0) {
+        container.classList.add('hidden');
+      }
+    });
+
+    list.appendChild(row);
+  });
+
+  container.classList.remove('hidden');
+}
+
+
+
+    function removeItem(index) {
+      items.splice(index, 1);
+      renderItemList();
+      
+      if (items.length === 0) {
+        document.getElementById('itemListContainer').classList.add('hidden');
+      }
+    }
+
+    function renderItemList() {
+      const itemList = document.getElementById('itemList');
+      itemList.innerHTML = '';
+
+      items.forEach(function(item, index) {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg';
+        itemDiv.innerHTML = `
+          <span class="text-gray-800">${index + 1}. ${item[0]} (${item[1]}x) — Rp ${item[2].toLocaleString('id-ID')} = <strong>Rp ${item[3].toLocaleString('id-ID')}</strong></span>
+          <button class="text-red-500 hover:text-red-700 font-bold text-lg" data-index="${index}" aria-label="Hapus item">×</button>
+        `;
+        
+        itemDiv.querySelector('button').addEventListener('click', function(e) {
+          const idx = parseInt(e.currentTarget.dataset.index);
+          removeItem(idx);
+        });
+
+        itemList.appendChild(itemDiv);
+      });
+    }
+
+
+    /**
+     * ============================================
+     * SUBMIT FUNCTIONS
+     * ============================================
+     */
+    function submitExpense(status) {
+      const tempatBelanja = document.getElementById('tempatBelanja').value.trim();
+
+      if (!tempatBelanja) {
+        showToast('Mohon isi tempat belanja', 'warning');
+        return;
+      }
+
+      if (status === 'submitted' && items.length === 0 && operasional.length === 0) {
+  showToast('Tambahkan minimal 1 barang atau operasional', 'warning');
+  return;
+}
+
+if (status === 'submitted' && !currentPhoto) {
+  showToast('Mohon upload foto bukti terlebih dahulu', 'warning');
+  return;
+}
+
+      const submitBtn = document.getElementById('submitButton');
+      const draftBtn = document.getElementById('draftButton');
+      const submitBtnText = document.getElementById('submitButtonText');
+      const draftBtnText = document.getElementById('draftButtonText');
+      
+      const originalSubmitText = submitBtnText.textContent;
+      const originalDraftText = draftBtnText.textContent;
+      
+      submitBtn.disabled = true;
+      draftBtn.disabled = true;
+      
+      if (status === 'submitted') {
+        submitBtnText.innerHTML = `
+          <div class="flex items-center justify-center gap-2">
+            <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>MENYIMPAN...</span>
+          </div>
+        `;
+      } else {
+        draftBtnText.innerHTML = `
+          <div class="flex items-center justify-center gap-2">
+            <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>MENYIMPAN...</span>
+          </div>
+        `;
+      }
+
+      const data = {
+  tempat_belanja: tempatBelanja,
+  items: JSON.stringify(items),                 // bahan baku
+  operasional: JSON.stringify(operasional),     // 🆕 kolom H
+  foto_url: currentPhoto || '',
+  foto_file_id: currentPhotoFileId || '',
+  status: status
+};
+
+
+      if (currentDraftId) {
+        const fd = new FormData();
+fd.append('action', 'updateTransaksi');
+fd.append('id', currentDraftId);
+
+Object.keys(data).forEach(k => {
+  if (data[k] !== undefined && data[k] !== null) {
+    fd.append(k, data[k]);
+  }
+});
+
+fetch(API_BASE, {
+  method: 'POST',
+  body: fd
+})
+.then(res => res.json())
+.then(result => {
+  submitBtnText.textContent = originalSubmitText;
+  draftBtnText.textContent = originalDraftText;
+  submitBtn.disabled = false;
+  draftBtn.disabled = false;
+
+  if (result.success) {
+
+    if (status === 'submitted' && currentDraftId) {
+      removeDraftFromList(currentDraftId);
+    }
+
+    if (status === 'draft') {
+      showToast('Draft berhasil diperbarui!', 'success');
+    } else {
+      showToast('Pengeluaran berhasil disimpan!', 'success');
+    }
+
+    setTimeout(function() {
+      resetForm();
+      navigate('form');
+    }, 300);
+  }
+})
+.catch(error => {
+  submitBtnText.textContent = originalSubmitText;
+  draftBtnText.textContent = originalDraftText;
+  submitBtn.disabled = false;
+  draftBtn.disabled = false;
+  showToast('Error: ' + error, 'error');
+});
+      } else {
+        const fd = new FormData();
+fd.append('action', 'createTransaksi');
+
+Object.keys(data).forEach(k => {
+  if (data[k] !== undefined && data[k] !== null) {
+    fd.append(k, data[k]);
+  }
+});
+
+fetch(API_BASE, {
+  method: 'POST',
+  body: fd
+})
+.then(res => res.json())
+.then(result => {
+  submitBtnText.textContent = originalSubmitText;
+  draftBtnText.textContent = originalDraftText;
+  submitBtn.disabled = false;
+  draftBtn.disabled = false;
+
+  if (result.success) {
+    if (status === 'draft') {
+      showToast('Draft berhasil disimpan!', 'success');
+    } else {
+      showToast('Pengeluaran berhasil disimpan!', 'success');
+    }
+
+    setTimeout(function() {
+      resetForm();
+      navigate('form');
+    }, 1000);
+  } else {
+    showToast(result.message, 'error');
+  }
+})
+.catch(error => {
+  submitBtnText.textContent = originalSubmitText;
+  draftBtnText.textContent = originalDraftText;
+  submitBtn.disabled = false;
+  draftBtn.disabled = false;
+  showToast('Error: ' + error, 'error');
+});
+      }
+    }
+
+function resetForm() {
+  document.getElementById('tempatBelanja').value = '';
+  document.getElementById('namaBarang').value = '';
+  document.getElementById('hargaBarang').value = '';
+  document.getElementById('jumlahBarang').value = '1';
+
+  // 🔥 RESET DATA
+  items = [];
+  operasional = [];
+
+  currentPhoto = null;
+  currentPhotoFileId = null;
+  currentDraftId = null;
+
+  // 🔥 RESET PREVIEW LIST
+  document.getElementById('itemList').innerHTML = '';
+  document.getElementById('operasionalList').innerHTML = '';
+  document.getElementById('itemListContainer').classList.add('hidden');
+  document.getElementById('operasionalListContainer').classList.add('hidden');
+
+  // 🔥 RESET FOTO
+  const box = document.getElementById('photoPreview');
+  if (box) {
+    box.innerHTML = '';
+    box.classList.add('hidden');
+  }
+
+  stopCamera(); // jaga-jaga
+}
+
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlight(text, keyword) {
+  if (!text || typeof text !== 'string') return text || '';
+  if (!keyword) return text;
+
+  const safeKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`(${safeKeyword})`, 'gi');
+
+  return text.replace(
+    re,
+    '<span class="bg-yellow-200 px-1 rounded">$1</span>'
+  );
+}
+
+
+    /**
+     * ============================================
+     * ADMIN - LAPORAN
+     * ⭐ PERUBAHAN: Format daily card dengan red design
+     * ============================================
+     */
+    function loadPeriodReport() {
+      const startInput = document.getElementById('startDateSelector').value;
+      const endInput = document.getElementById('endDateSelector').value;
+
+      if (!startInput || !endInput) {
+        showToast('Pilih tanggal awal dan akhir', 'warning');
+        return;
+      }
+
+      startDate = startInput;
+      endDate = endInput;
+
+      if (new Date(startDate) > new Date(endDate)) {
+        showToast('Tanggal awal harus sebelum tanggal akhir', 'error');
+        return;
+      }
+     setLoadReportLoading(true);
+
+       const fd = new FormData();
+fd.append('action', 'getLaporanByPeriod');
+fd.append('startDate', startDate);
+fd.append('endDate', endDate);
+
+fetch(API_BASE, {
+  method: 'POST',
+  body: fd
+})
+.then(res => res.json())
+.then(data => {
+  allPeriodTransactions = data;
+  adminSuggestions = buildAdminSuggestions(data);
+
+  currentSearchKeyword = '';
+  adminInput.value = '';
+  adminSuggestBox.classList.add('hidden');
+  clearBtn.classList.add('hidden');
+
+  renderReport(data);
+})
+ .catch(error => {
+    showToast('Error loading report: ' + error, 'error');
+  })
+  .finally(() => {
+    setLoadReportLoading(false); // ⬅️ TAMBAH
+  });
+}
+
+
+if (adminInput) adminInput.value = '';
+if (adminSuggestBox) adminSuggestBox.classList.add('hidden');
+
+function buildAdminSuggestions(transactions) {
+  const tempatSet = new Set();
+  const barangSet = new Set();
+  const operasionalSet = new Set();
+
+  transactions.forEach(t => {
+    // TEMPAT BELANJA
+    if (typeof t.tempat_belanja === 'string' && t.tempat_belanja.trim()) {
+      tempatSet.add(t.tempat_belanja.trim());
+    }
+
+    // BAHAN BAKU
+    if (t.items) {
+      try {
+        const items = JSON.parse(t.items);
+        items.forEach(i => {
+          if (i && typeof i[0] === 'string' && i[0].trim()) {
+            barangSet.add(i[0].trim());
+          }
+        });
+      } catch (e) {}
+    }
+
+    // 🔥 OPERASIONAL (BARU)
+    if (t.operasional) {
+      try {
+        const ops = JSON.parse(t.operasional);
+        ops.forEach(o => {
+          if (o && typeof o[0] === 'string' && o[0].trim()) {
+            operasionalSet.add(o[0].trim());
+          }
+        });
+      } catch (e) {}
+    }
+  });
+
+  return {
+    tempat: Array.from(tempatSet),
+    barang: Array.from(barangSet),
+    operasional: Array.from(operasionalSet)
+  };
+}
+
+function setLoadReportLoading(isLoading) {
+  const btn = document.getElementById('btnLoadReport');
+  if (!btn) return;
+
+  const text = btn.querySelector('span');
+  const icon = btn.querySelector('svg');
+
+  if (isLoading) {
+    btn.disabled = true;
+    btn.classList.add('opacity-70', 'cursor-not-allowed');
+
+    btn.dataset.originalText = text.textContent;
+    text.textContent = 'Memuat...';
+
+    icon.classList.add('animate-spin');
+  } else {
+    btn.disabled = false;
+    btn.classList.remove('opacity-70', 'cursor-not-allowed');
+
+    text.textContent = btn.dataset.originalText || 'Tampilkan Laporan';
+    icon.classList.remove('animate-spin');
+  }
+}
+
+
+function handleAdminSearch(raw) {
+  const keyword = raw.trim().toLowerCase();
+
+  // KOSONG → reset
+  if (!keyword) {
+    adminSuggestBox.classList.add('hidden');
+    clearBtn.classList.add('hidden');
+    filterTransactions('');
+    return;
+  }
+
+  clearBtn.classList.remove('hidden');
+
+  // 🔥 PENTING: FILTER LANGSUNG JALAN (FUZZY SEARCH)
+  filterTransactions(keyword);
+
+  // =========================
+  // SUGGESTION (OPSIONAL)
+  // =========================
+  const tempatMatch = adminSuggestions.tempat.filter(v =>
+    v.toLowerCase().includes(keyword)
+  );
+
+  const barangMatch = adminSuggestions.barang.filter(v =>
+    v.toLowerCase().includes(keyword)
+  );
+
+  const operasionalMatch = (adminSuggestions.operasional || []).filter(v =>
+    v.toLowerCase().includes(keyword)
+  );
+
+  const results = [
+    ...new Set([...tempatMatch, ...barangMatch, ...operasionalMatch])
+  ].slice(0, 8);
+
+  if (!results.length) {
+    adminSuggestBox.classList.add('hidden');
+    return;
+  }
+
+  adminSuggestBox.innerHTML = results.map(v => `
+    <div class="px-4 py-2 text-sm cursor-pointer hover:bg-red-50"
+         onclick="selectAdminSuggestion('${v.replace(/'/g, "\\'")}')">
+      ${v}
+    </div>
+  `).join('');
+
+  adminSuggestBox.classList.remove('hidden');
+}
+
+
+
+
+// ⭐ FUNCTION UNTUK FILTER BERDASARKAN SEARCH
+function filterTransactions(keyword) {
+  currentSearchKeyword = (keyword || '').toLowerCase().trim();
+
+  if (!currentSearchKeyword) {
+    renderReport(allPeriodTransactions);
+    return;
+  }
+
+  const filtered = allPeriodTransactions.filter(function (transaction) {
+    const tempat =
+      typeof transaction.tempat_belanja === 'string'
+        ? transaction.tempat_belanja.toLowerCase()
+        : '';
+
+    const tempatMatch = tempat.includes(currentSearchKeyword);
+
+    let itemMatch = false;
+    if (transaction.items) {
+      try {
+        const items = JSON.parse(transaction.items);
+        itemMatch = items.some(i =>
+          typeof i[0] === 'string' &&
+          i[0].toLowerCase().includes(currentSearchKeyword)
+        );
+      } catch (e) {}
+    }
+
+    let operasionalMatch = false;
+    if (transaction.operasional) {
+      try {
+        const ops = JSON.parse(transaction.operasional);
+        operasionalMatch = ops.some(o =>
+          typeof o[0] === 'string' &&
+          o[0].toLowerCase().includes(currentSearchKeyword)
+        );
+      } catch (e) {}
+    }
+
+    return tempatMatch || itemMatch || operasionalMatch;
+  });
+
+  renderReport(filtered);
+}
+    function renderReport(periodTransactions) {
+      let totalAmount = 0;
+let totalBahan = 0;
+let totalOperasional = 0;
+
+let countBahan = 0;
+let countOperasional = 0;
+
+     function isPlaceMatch(transaction) {
+  if (!currentSearchKeyword) return false;
+  if (!transaction.tempat_belanja) return false;
+
+  return transaction.tempat_belanja
+    .toLowerCase()
+    .includes(currentSearchKeyword);
+}
+
+     const isSearching = typeof currentSearchKeyword === 'string' && currentSearchKeyword.length > 0;
+
+function itemMatch(name) {
+  if (!isSearching) return true;
+  return name.toLowerCase().includes(currentSearchKeyword);
+}
+
+      periodTransactions.forEach(function(t) {
+        const bahan = t.items ? JSON.parse(t.items) : [];
+const operasional = t.operasional ? JSON.parse(t.operasional) : [];
+
+       bahan.forEach(item => {
+  // MODE TEMPAT → hitung semua
+  if (isPlaceMatch(t)) {
+    totalBahan += item[3];
+    countBahan++;
+    return;
+  }
+
+  // MODE BARANG / TANPA SEARCH
+  if (!currentSearchKeyword || itemMatch(item[0])) {
+    totalBahan += item[3];
+    countBahan++;
+  }
+});
+
+operasional.forEach(item => {
+  // MODE TEMPAT → hitung semua
+  if (isPlaceMatch(t)) {
+    totalOperasional += item[3];
+    countOperasional++;
+    return;
+  }
+
+  // MODE BARANG / TANPA SEARCH
+  if (!currentSearchKeyword || itemMatch(item[0])) {
+    totalOperasional += item[3];
+    countOperasional++;
+  }
+});
+
+
+
+if (isPlaceMatch(t)) {
+  // 🔵 MODE TEMPAT → hitung SEMUA
+  bahan.forEach(item => totalAmount += item[3]);
+  operasional.forEach(item => totalAmount += item[3]);
+} else {
+  // 🟢 MODE ITEM → logika lama (TIDAK DIUBAH)
+  bahan.forEach(item => {
+    if (itemMatch(item[0])) {
+      totalAmount += item[3];
+    }
+  });
+
+  operasional.forEach(item => {
+    if (itemMatch(item[0])) {
+      totalAmount += item[3];
+    }
+  });
+}
+        });
+
+      const startObj = new Date(startDate);
+      const endObj = new Date(endDate);
+      let periodLabel = '';
+      const isMultiDay = startDate !== endDate;
+      
+      if (startDate === endDate) {
+        periodLabel = startObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      } else {
+        periodLabel = startObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + ' - ' + endObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      }
+
+      document.getElementById('periodLabel').textContent = periodLabel;
+      document.getElementById('periodTotalAmount').textContent = 'Rp ' + totalAmount.toLocaleString('id-ID');
+     
+
+     // ===== BAHAN BAKU (AMAN) =====
+const bahanAmountEl = document.getElementById('bahanTotalAmount');
+const bahanCountEl = document.getElementById('bahanTotalTransactions');
+
+if (bahanAmountEl && bahanCountEl) {
+  bahanAmountEl.textContent = 'Rp ' + totalBahan.toLocaleString('id-ID');
+  bahanCountEl.textContent = countBahan;
+}
+
+// ===== OPERASIONAL (AMAN) =====
+const operasionalAmountEl = document.getElementById('operasionalTotalAmount');
+const operasionalCountEl = document.getElementById('operasionalTotalTransactions');
+
+if (operasionalAmountEl && operasionalCountEl) {
+  operasionalAmountEl.textContent =
+    'Rp ' + totalOperasional.toLocaleString('id-ID');
+  operasionalCountEl.textContent = countOperasional;
+}
+
+      if (currentSearchKeyword) {
+  document.getElementById('periodLabel').textContent = periodLabel + ' (Hasil pencarian: "' + currentSearchKeyword + '")';
+}
+
+      const chartContainer = document.getElementById('chartContainer');
+      if (isMultiDay) {
+        const dailyTotals = {};
+        
+        periodTransactions.forEach(function(t) {
+          const dateKey = new Date(t.created_at).toISOString().split('T')[0];
+          if (!dailyTotals[dateKey]) {
+            dailyTotals[dateKey] = 0;
+          }
+          const bahan = t.items ? JSON.parse(t.items) : [];
+const operasional = t.operasional ? JSON.parse(t.operasional) : [];
+
+if (isPlaceMatch(t)) {
+  bahan.forEach(item => dailyTotals[dateKey] += item[3]);
+  operasional.forEach(item => dailyTotals[dateKey] += item[3]);
+} else {
+  bahan.forEach(item => {
+    if (itemMatch(item[0])) {
+      dailyTotals[dateKey] += item[3];
+    }
+  });
+
+  operasional.forEach(item => {
+    if (itemMatch(item[0])) {
+      dailyTotals[dateKey] += item[3];
+    }
+  });
+}
+        });
+
+        const dailyData = Object.keys(dailyTotals).sort().map(function(dateKey) {
+          const dateObj = new Date(dateKey);
+          return {
+            date: dateKey,
+            label: dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+            total: dailyTotals[dateKey]
+          };
+        });
+
+        chartContainer.classList.remove('hidden');
+        drawChart(dailyData);
+      } else {
+        chartContainer.classList.add('hidden');
+      }
+
+      renderTransactions(periodTransactions);
+    }
+
+    function drawChart(dailyData) {
+      const canvas = document.getElementById('chartCanvas');
+      canvas.innerHTML = '';
+
+      if (dailyData.length === 0) return;
+
+      const maxValue = Math.max.apply(Math, dailyData.map(function(d) { return d.total; }));
+      const chartHeight = 240;
+      const chartPadding = 40;
+      const barWidth = Math.min(60, (canvas.offsetWidth - chartPadding * 2) / dailyData.length - 10);
+
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', '100%');
+      svg.setAttribute('height', chartHeight);
+      svg.setAttribute('viewBox', '0 0 ' + canvas.offsetWidth + ' ' + chartHeight);
+
+      const primaryColor = '#DC2626';
+
+      dailyData.forEach(function(data, index) {
+        const barHeight = (data.total / maxValue) * (chartHeight - chartPadding - 30);
+        const x = chartPadding + index * (barWidth + 10);
+        const y = chartHeight - chartPadding - barHeight;
+
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', x);
+        rect.setAttribute('y', y);
+        rect.setAttribute('width', barWidth);
+        rect.setAttribute('height', barHeight);
+        rect.setAttribute('fill', primaryColor);
+        rect.setAttribute('rx', '6');
+        rect.classList.add('hover:opacity-80', 'transition-opacity', 'cursor-pointer');
+        svg.appendChild(rect);
+
+        const valueText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        valueText.setAttribute('x', x + barWidth / 2);
+        valueText.setAttribute('y', y - 5);
+        valueText.setAttribute('text-anchor', 'middle');
+        valueText.setAttribute('fill', '#374151');
+        valueText.setAttribute('font-size', '11');
+        valueText.setAttribute('font-weight', 'bold');
+        valueText.textContent = (data.total / 1000).toFixed(0) + 'k';
+        svg.appendChild(valueText);
+
+        const dateText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        dateText.setAttribute('x', x + barWidth / 2);
+        dateText.setAttribute('y', chartHeight - chartPadding + 15);
+        dateText.setAttribute('text-anchor', 'middle');
+        dateText.setAttribute('fill', '#6B7280');
+        dateText.setAttribute('font-size', '10');
+        dateText.textContent = data.label;
+        svg.appendChild(dateText);
+      });
+
+      canvas.appendChild(svg);
+    }
+
+    /**
+     * ⭐ PERUBAHAN UTAMA: Render daily cards dengan design red card
+     */
+    function renderTransactions(transactions) {
+ document.getElementById('periodTotalTransactions').textContent =
+    transactions.length;
+     
+      const container = document.getElementById('transactionsList');
+      const emptyState = document.getElementById('emptyState');
+
+      if (transactions.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      container.innerHTML = '';
+
+      transactions.sort(function(a, b) {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+
+      const isMultiDay = startDate !== endDate;
+
+      if (isMultiDay) {
+        const groupedByDate = {};
+        
+        transactions.forEach(function(transaction) {
+          const bahan = transaction.items
+  ? JSON.parse(transaction.items)
+  : [];
+
+const operasional = transaction.operasional
+  ? JSON.parse(transaction.operasional)
+  : [];
+
+          const dateKey = new Date(transaction.created_at).toISOString().split('T')[0];
+          if (!groupedByDate[dateKey]) {
+            groupedByDate[dateKey] = [];
+          }
+          groupedByDate[dateKey].push(transaction);
+        });
+
+        Object.keys(groupedByDate).sort(function(a, b) {
+          return new Date(b) - new Date(a);
+        }).forEach(function(dateKey) {
+          const dailyTransactions = groupedByDate[dateKey];
+          const dateObj = new Date(dateKey);
+          const tanggal = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+          
+          let dailyTotal = 0;
+
+dailyTransactions.forEach(function(t) {
+  const bahan = t.items ? JSON.parse(t.items) : [];
+  const operasional = t.operasional ? JSON.parse(t.operasional) : [];
+
+  bahan.forEach(function(item) {
+    dailyTotal += item[3];
+  });
+
+  operasional.forEach(function(item) {
+    dailyTotal += item[3];
+  });
+});
+
+
+          // ⭐ HITUNG JUMLAH TEMPAT BELANJA UNIK
+          const uniquePlaces = new Set();
+          dailyTransactions.forEach(function(t) {
+            uniquePlaces.add(t.tempat_belanja);
+          });
+          const uniquePlacesCount = uniquePlaces.size;
+
+          const dayCard = document.createElement('div');
+dayCard.className = `
+  bg-gradient-to-r from-red-500 to-red-600
+  rounded-2xl
+  shadow-lg
+  overflow-hidden
+`;
+
+
+
+          
+          // ⭐ DESIGN RED CARD UNTUK DAILY SUMMARY
+          dayCard.innerHTML = `
+  <div class="px-3 py-2 text-white">
+    <div class="flex items-center justify-between gap-3">
+
+      <!-- KIRI -->
+      <div class="flex-1 min-w-0">
+        <!-- Tanggal -->
+        <div class="flex items-center gap-2 leading-none mb-1">
+          <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <p class="font-normal text-base truncate">
+            ${tanggal}
+          </p>
+        </div>
+
+        <!-- Nominal -->
+        <p class="text-2xl font-bold leading-tight">
+          Rp ${dailyTotal.toLocaleString('id-ID')}
+        </p>
+
+        <!-- Label -->
+        <p class="text-sm opacity-90 leading-tight">
+          Total Belanja
+        </p>
+      </div>
+
+      <!-- KANAN : BADGE TEMPAT -->
+      <div
+        class="flex flex-col items-center justify-center
+               bg-white bg-opacity-20
+               rounded-xl
+               px-4 py-2
+               text-center">
+
+        <p class="text-2xl font-bold leading-none">
+          ${uniquePlacesCount}
+        </p>
+        <p class="text-xs opacity-90 leading-none mt-0.5">
+          Tempat
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="hidden daily-detail-section p-4 space-y-3 bg-gray-50">
+  </div>
+`;
+
+
+          const detailSection = dayCard.querySelector('.daily-detail-section');
+          
+          dailyTransactions.forEach(function(transaction) {
+            const bahan = transaction.items
+  ? JSON.parse(transaction.items)
+  : [];
+
+const operasional = transaction.operasional
+  ? JSON.parse(transaction.operasional)
+  : [];
+
+            const timeObj = new Date(transaction.created_at);
+            const waktu = timeObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            
+            let transactionTotal = 0;
+
+bahan.forEach(item => {
+  transactionTotal += item[3];
+});
+
+operasional.forEach(item => {
+  transactionTotal += item[3];
+});
+
+
+            const transactionCard = document.createElement('div');
+            transactionCard.className = 'border-2 border-gray-200 rounded-lg p-3 hover:border-red-400 transition-all cursor-pointer bg-white';
+            
+            transactionCard.innerHTML = `
+              <div class="flex items-start justify-between mb-2">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <p class="font-bold text-gray-800 text-sm">${transaction.tempat_belanja}</p>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs text-gray-500 ml-6">
+                    <span>⏰ ${waktu}</span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <p class="text-base font-bold text-red-600">Rp ${transactionTotal.toLocaleString('id-ID')}</p>
+                  <p class="text-xs text-gray-500">
+  ${bahan.length + operasional.length} item
+</p>
+
+                </div>
+              </div>
+              <div class="hidden transaction-detail-section mt-2 pt-2 border-t border-gray-200">
+               <p class="text-xs font-semibold text-gray-700 mb-1">Bahan Baku:</p>
+${bahan.length === 0
+  ? '<div class="text-xs text-gray-400 ml-2 mb-1">– Tidak ada</div>'
+  : bahan.map(item => `
+      <div class="flex justify-between text-xs text-gray-600 mb-1 ml-2">
+        <span>• ${item[0]} (${item[1]}x @ Rp ${item[2].toLocaleString('id-ID')})</span>
+        <span class="font-semibold">Rp ${item[3].toLocaleString('id-ID')}</span>
+      </div>
+    `).join('')
+}
+
+<p class="text-xs font-semibold text-gray-700 mt-2 mb-1">Operasional:</p>
+${operasional.length === 0
+  ? '<div class="text-xs text-gray-400 ml-2">– Tidak ada</div>'
+  : operasional.map(item => `
+      <div class="flex justify-between text-xs text-gray-600 mb-1 ml-2">
+        <span>• ${item[0]} (${item[1]}x @ Rp ${item[2].toLocaleString('id-ID')})</span>
+        <span class="font-semibold">Rp ${item[3].toLocaleString('id-ID')}</span>
+      </div>
+    `).join('')
+}
+
+                ${transaction.foto_url ? `
+                  <div class="mt-3">
+  <p class="text-sm font-semibold text-gray-700 mb-2">Foto Bukti:</p>
+
+  <div class="w-full aspect-[3/4] bg-black overflow-hidden rounded-xl border-2 border-gray-200">
+    <img src="${normalizeDriveImage(transaction.foto_url)}"
+         referrerpolicy="no-referrer"
+         class="w-full h-full object-cover"
+         alt="Bukti belanja">
+                  </div>
+                ` : ''}
+              </div>
+            `;
+
+            transactionCard.addEventListener('click', function(e) {
+              e.stopPropagation();
+              const transDetail = transactionCard.querySelector('.transaction-detail-section');
+              transDetail.classList.toggle('hidden');
+            });
+
+            detailSection.appendChild(transactionCard);
+          });
+
+          dayCard.addEventListener('click', function() {
+            detailSection.classList.toggle('hidden');
+          });
+
+          container.appendChild(dayCard);
+        });
+
+      } else {
+        transactions.forEach(function(transaction) {
+          const bahan = transaction.items
+  ? JSON.parse(transaction.items)
+  : [];
+
+const operasional = transaction.operasional
+  ? JSON.parse(transaction.operasional)
+  : [];
+
+          const dateObj = new Date(transaction.created_at);
+          const tanggal = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+          const waktu = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+          
+          let transactionTotal = 0;
+bahan.forEach(item => transactionTotal += item[3]);
+operasional.forEach(item => transactionTotal += item[3]);
+
+
+          const card = document.createElement('div');
+          card.className = 'border-2 border-gray-200 rounded-xl p-4 hover:border-red-400 transition-all cursor-pointer';
+          
+          card.innerHTML = `
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  </svg>
+                  <p class="font-bold text-gray-800">
+  ${highlight(transaction.tempat_belanja, adminInput.value)}
+</p>
+                </div>
+                <div class="flex items-center gap-3 text-sm text-gray-500 ml-7">
+                  <span>📅 ${tanggal}</span>
+                  <span>⏰ ${waktu}</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-lg font-bold text-red-600">Rp ${transactionTotal.toLocaleString('id-ID')}</p>
+                <p class="text-xs text-gray-500">
+  ${bahan.length + operasional.length} item
+</p>
+
+              </div>
+            </div>
+            <div class="hidden detail-section mt-3 pt-3 border-t border-gray-200">
+              <div class="text-sm font-semibold text-gray-700 mb-2">
+  Bahan Baku:
+</div>
+
+${bahan.length === 0
+  ? '<div class="text-xs text-gray-400 mb-2 ml-2">– Tidak ada</div>'
+  : bahan.map(item => `
+      <div class="flex justify-between text-sm text-gray-600 mb-1 ml-2">
+        <span>• ${item[0]} (${item[1]}x @ Rp ${item[2].toLocaleString('id-ID')})</span>
+        <span class="font-semibold">
+          Rp ${item[3].toLocaleString('id-ID')}
+        </span>
+      </div>
+    `).join('')
+}
+
+<div class="text-sm font-semibold text-gray-700 mt-3 mb-2">
+  Operasional:
+</div>
+
+${operasional.length === 0
+  ? '<div class="text-xs text-gray-400 mb-1 ml-2">– Tidak ada</div>'
+  : operasional.map(item => `
+      <div class="flex justify-between text-sm text-gray-600 mb-1 ml-2">
+        <span>• ${item[0]} (${item[1]}x @ Rp ${item[2].toLocaleString('id-ID')})</span>
+        <span class="font-semibold">
+          Rp ${item[3].toLocaleString('id-ID')}
+        </span>
+      </div>
+    `).join('')
+}
+
+              ${transaction.foto_url ? `
+  <div class="mt-3">
+  <p class="text-sm font-semibold text-gray-700 mb-2">Foto Bukti:</p>
+
+  <div class="w-full aspect-[3/4] bg-black overflow-hidden rounded-xl border-2 border-gray-200">
+    <img src="${normalizeDriveImage(transaction.foto_url)}"
+         referrerpolicy="no-referrer"
+         class="w-full h-full object-cover"
+         alt="Bukti belanja">
+  </div>
+</div>
+
+` : ''}
+            </div>
+          `;
+
+          card.addEventListener('click', function() {
+            const detailSection = card.querySelector('.detail-section');
+            detailSection.classList.toggle('hidden');
+          });
+
+          container.appendChild(card);
+        });
+      }
+    }
+
+    /**
+     * ============================================
+     * EVENT LISTENERS INITIALIZATION
+     * ============================================
+     */
+    function initEventListeners() {
+      document.getElementById('btnCatatPengeluaran').addEventListener('click', function() {
+        resetForm();
+        navigate('form');
+      });
+
+      document.getElementById('btnDraftPengeluaran').addEventListener('click', function() {
+        navigate('draft');
+      });
+
+      document.getElementById('btnAdmin').addEventListener('click', function() {
+        showPinPopup();
+      });
+
+      document.getElementById('btnCancelPin').addEventListener('click', hidePinPopup);
+      document.getElementById('btnSubmitPin').addEventListener('click', verifyPin);
+      document.getElementById('pinInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          verifyPin();
+        }
+      });
+
+      document.getElementById('addItemButton')
+  .addEventListener('click', () => addItemToList('bahan'));
+
+document.getElementById('addOperasionalButton')
+  .addEventListener('click', () => addItemToList('operasional'));
+
+      document.getElementById('submitButton').addEventListener('click', function() {
+        submitExpense('submitted');
+      });
+      document.getElementById('draftButton').addEventListener('click', function() {
+        submitExpense('draft');
+      });
+      
+      document.getElementById('backButton').addEventListener('click', function() {
+        resetForm();
+        navigate('home');
+      });
+
+      document.getElementById('backToDraftButton').addEventListener('click', function() {
+        resetForm();
+        navigate('home');
+      });
+
+      document.getElementById('backFromAdmin').addEventListener('click', function() {
+        navigate('home');
+      });
+
+      document.getElementById('btnLoadReport').addEventListener('click', function() {
+        loadPeriodReport();
+      });
+
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('startDateSelector').value = today;
+      document.getElementById('endDateSelector').value = today;
+
+      document.getElementById('namaBarang').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          document.getElementById('jumlahBarang').focus();
+        }
+      });
+
+      document.getElementById('jumlahBarang').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          document.getElementById('hargaBarang').focus();
+        }
+      });
+
+      document.getElementById('hargaBarang').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addItemToList();
+        }
+      });
+
+      // ===== CAMERA EVENTS =====
+document.getElementById('openCameraBtn').addEventListener('click', function () {
+  openCamera();
+});
+
+document.getElementById('captureBtn').addEventListener('click', function () {
+  captureFromCamera();
+});
+document.getElementById('tempatBelanja').addEventListener('input', function () {
+  const val = this.value.trim();
+  if (!val) {
+    document.getElementById('suggestTempat').classList.add('hidden');
+    return;
+  }
+
+  const results = filterSuggestions(cacheTempatBelanja, val);
+  renderSuggestion('suggestTempat', results, 'selectTempat');
+});
+
+document.getElementById('namaBarang').addEventListener('input', function () {
+  const val = this.value.trim();
+  if (!val) {
+    document.getElementById('suggestBarang').classList.add('hidden');
+    return;
+  }
+
+  const results = filterSuggestions(cacheNamaBarang, val);
+  renderSuggestion('suggestBarang', results, 'selectBarang');
+});
+
+document.getElementById('tempatBelanja').addEventListener('blur', function () {
+  setTimeout(() => {
+    document.getElementById('suggestTempat').classList.add('hidden');
+  }, 150);
+});
+
+document.getElementById('namaBarang').addEventListener('blur', function () {
+  setTimeout(() => {
+    document.getElementById('suggestBarang').classList.add('hidden');
+  }, 150);
+});
+
+
+    }
+
+function selectTempat(val) {
+  document.getElementById('tempatBelanja').value = val;
+  document.getElementById('suggestTempat').classList.add('hidden');
+}
+function selectBarang(val) {
+  document.getElementById('namaBarang').value = val;
+  document.getElementById('suggestBarang').classList.add('hidden');
+}
+
+    /**
+     * ============================================
+     * INITIALIZE APP
+     * ============================================
+     */
+    (function init() {
+  initEventListeners();
+  preloadSuggestions();
+
+  // 🔥 PRELOAD DRAFT DI BACKGROUND
+  loadAllDrafts();
+
+  const hash = location.hash.replace('#', '');
+  const page = hash || 'home';
+
+  history.replaceState({ page }, '', '#' + page);
+  showPage(page);
+})();
+
+
+    let cameraStream = null;
+
+// Buka kamera
+async function openCamera() {
+  const wrap = document.getElementById('cameraWrap');
+  const video = document.getElementById('cameraVideo');
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false
+    });
+
+    video.srcObject = cameraStream;
+    wrap.classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    showToast('Tidak bisa mengakses kamera', 'error');
+  }
+}
+
+// Tutup kamera (aman dipanggil berulang)
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  const wrap = document.getElementById('cameraWrap');
+  if (wrap) wrap.classList.add('hidden');
+}
+
+async function captureFromCamera() {
+  const video = document.getElementById('cameraVideo');
+  if (!video.videoWidth) {
+    showToast('Kamera belum siap', 'error');
+    return;
+  }
+
+  const canvas = document.createElement('canvas');
+
+// 🔥 ukuran SESUAI BOX VIDEO YANG TERLIHAT
+const width = video.clientWidth;
+const height = video.clientHeight;
+
+canvas.width = width;
+canvas.height = height;
+
+const ctx = canvas.getContext('2d');
+
+// 🔥 gambar PERSIS seperti yang terlihat (TANPA CROP TAMBAHAN)
+const videoW = video.videoWidth;
+const videoH = video.videoHeight;
+
+const scale = Math.max(width / videoW, height / videoH);
+
+const drawW = videoW * scale;
+const drawH = videoH * scale;
+
+const offsetX = (width - drawW) / 2;
+const offsetY = (height - drawH) / 2;
+
+ctx.drawImage(
+  video,
+  offsetX,
+  offsetY,
+  drawW,
+  drawH
+);
+
+
+  const base64Data = canvas.toDataURL('image/jpeg', 0.9);
+
+  stopCamera(); // 🔒 matikan kamera
+
+  document.getElementById('uploadSpinner').classList.remove('hidden');
+
+  const fd = new FormData();
+  fd.append('action', 'uploadPhoto');
+  fd.append('base64', base64Data);
+  fd.append('fileName', 'foto-' + Date.now() + '.jpg');
+
+ try {
+  const res = await fetch(API_BASE, { method: 'POST', body: fd });
+
+  const result = await res.json();
+  console.log("UPLOAD RESPONSE:", result);
+
+  if (result.success) {
+
+  currentPhoto = result.url;
+  currentPhotoFileId = result.fileId;
+
+  renderPhotoPreview(normalizeDriveImage(result.url));
+
+  showToast('Foto berhasil diambil', 'success');
+
+  // 🔥 AUTO SAVE FOTO KE DATABASE
+  const tempat = document.getElementById('tempatBelanja').value.trim();
+
+  if (tempat) {
+
+    const fd2 = new FormData();
+
+    if (currentDraftId) {
+      fd2.append('action', 'updateTransaksi');
+      fd2.append('id', currentDraftId);
+    } else {
+      fd2.append('action', 'createTransaksi');
+    }
+
+    fd2.append('tempat_belanja', tempat);
+    fd2.append('items', JSON.stringify(items || []));
+    fd2.append('operasional', JSON.stringify(operasional || []));
+    fd2.append('foto_url', currentPhoto);
+    fd2.append('foto_file_id', currentPhotoFileId);
+    fd2.append('status', 'draft');
+
+    fetch(API_BASE, {
+      method: 'POST',
+      body: fd2
+    })
+    .then(r => r.json())
+    .then(res => {
+
+      if (res.success && !currentDraftId) {
+        currentDraftId = res.id;
+      }
+
+    });
+
+  }
+
+} else {
+      showToast(result.message || 'Upload gagal', 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Gagal upload foto', 'error');
+  } finally {
+    document.getElementById('uploadSpinner').classList.add('hidden');
+  }
+}
+
+function preloadSuggestions() {
+  const fd = new FormData();
+  fd.append('action', 'getSuggestions');
+
+  fetch(API_BASE, {
+    method: 'POST',
+    body: fd
+  })
+    .then(res => res.json())
+    .then(data => {
+      cacheTempatBelanja = data.tempatBelanja || [];
+      cacheNamaBarang = data.namaBarang || [];
+      console.log('Suggestion loaded', data);
+    })
+    .catch(() => {
+      console.warn('Gagal preload suggestion');
+    });
+}
+
+
+function selectAdminSuggestion(value) {
+  adminInput.value = value;
+  adminSuggestBox.classList.add('hidden');
+  clearBtn.classList.remove('hidden');
+
+  filterTransactions(value);
+
+  const count = Number(
+  document.getElementById('periodTotalTransactions')?.textContent || 0
+);
+  if (count === 0) {
+    showToast(`Tidak ada transaksi untuk "${value}"`, 'warning');
+  } else {
+    showToast(`Ditemukan ${count} transaksi`, 'success');
+  }
+}
+document.addEventListener('click', function (e) {
+  if (!adminInput.contains(e.target) && !adminSuggestBox.contains(e.target)) {
+    adminSuggestBox.classList.add('hidden');
+  }
+});
+
+
+  </script>
+ </body>
+</html>
+
+
+
+
+
+
+

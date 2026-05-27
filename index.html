@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seblak Nyakcut</title>
+
+  <!-- CDN untuk tampilan. Jika Tailwind/Lucide gagal load, app tetap dibuat aman oleh app.js. -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { jakarta: ['Plus Jakarta Sans', 'sans-serif'] },
+          colors: {
+            brand: {
+              50:'#fef2f2',100:'#fee2e2',200:'#fecaca',300:'#fca5a5',400:'#f87171',
+              500:'#ef4444',600:'#dc2626',700:'#b91c1c',800:'#991b1b',900:'#7f1d1d'
+            },
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="h-full bg-gray-50">
+  <div id="app" class="h-full w-full overflow-auto">
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;color:#6b7280;">
+      Memuat aplikasi...
+    </div>
+  </div>
+
+  <script>
+    // Supaya blank putih tidak terjadi lagi saat ada error runtime.
+    function showStartupError(message) {
+      const app = document.getElementById('app');
+      if (!app) return;
+      app.innerHTML = `
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f9fafb;padding:24px;font-family:Arial,sans-serif;">
+          <div style="max-width:620px;background:white;border:1px solid #fecaca;border-radius:18px;padding:24px;box-shadow:0 12px 30px rgba(0,0,0,.08);">
+            <div style="font-size:20px;font-weight:800;color:#991b1b;margin-bottom:8px;">Aplikasi gagal dimuat</div>
+            <div style="font-size:14px;color:#374151;line-height:1.6;margin-bottom:12px;">${String(message).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</div>
+            <div style="font-size:12px;color:#6b7280;line-height:1.5;">Buka DevTools → Console untuk detail. Pastikan file <b>index.html</b>, <b>app.js</b>, <b>styles.css</b>, dan <b>config.js</b> berada dalam satu folder.</div>
+          </div>
+        </div>`;
+    }
+    window.addEventListener('error', e => showStartupError(e.message || 'Unknown JavaScript error'));
+    window.addEventListener('unhandledrejection', e => showStartupError(e.reason?.message || e.reason || 'Unhandled promise rejection'));
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./config.js?v=seblak-nyakcut-20260527-4"></script>
+  <script src="./app.js?v=seblak-nyakcut-20260527-4"></script>
+</body>
+</html>
