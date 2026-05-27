@@ -1192,9 +1192,11 @@ function renderItems(cfg) {
                 <div class="text-lg font-800 ${!itemUsesStock(item)?'text-blue-600':item.stock<=0?'text-red-600':item.stock<=item.min_stock?'text-amber-600':'text-emerald-600'}">${itemUsesStock(item) ? item.stock : '∞'}</div>
               </div>
               ${currentUser.role==='admin'?`
-              <div class="flex gap-1 ml-2 shrink-0">
-                <button data-edit-item="${item.__backendId}" class="p-1.5 rounded-lg hover:bg-blue-100 text-gray-400 hover:text-blue-600 transition"><i data-lucide="edit-2" style="width:14px;height:14px"></i></button>
-                <button data-del-item="${item.__backendId}" class="p-1.5 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-600 transition"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+              <div class="flex items-center gap-2 ml-2 shrink-0">
+                <button data-edit-item="${item.__backendId}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-800 hover:bg-blue-100 transition" title="Edit barang">
+                  <i data-lucide="edit-2" style="width:14px;height:14px"></i><span>Edit</span>
+                </button>
+                <button data-del-item="${item.__backendId}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition" title="Hapus barang"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
               </div>`:''}
             </div>`;
           }).join('')}
