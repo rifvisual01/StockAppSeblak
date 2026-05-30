@@ -784,7 +784,7 @@ function renderLogin(cfg) {
   const company = 'Management Stock';
 
   return `
-  <div class="login-screen h-full w-full flex items-center justify-center p-4 bg-gradient-to-br from-red-50 via-white to-red-50 relative overflow-hidden">
+  <div class="login-screen min-h-full w-full flex items-start justify-center px-4 pt-6 pb-8 sm:pt-8 bg-gradient-to-br from-red-50 via-white to-red-50 relative overflow-y-auto overflow-x-hidden">
     <!-- Background Elements -->
     <div class="absolute top-0 right-0 w-96 h-96 bg-red-200/20 rounded-full blur-3xl -z-10" style="animation: float 6s ease-in-out infinite"></div>
     <div class="absolute -bottom-32 -left-32 w-80 h-80 bg-red-100/30 rounded-full blur-3xl -z-10" style="animation: float 8s ease-in-out infinite reverse"></div>
