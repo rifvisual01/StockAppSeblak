@@ -463,6 +463,7 @@ window.txCategoryFilter = 'all';
 window.txDate = getLocalDateInputValue();
 window.txDateTouched = false;
 window.showTxCartDetail = false;
+window.isProcessingTx = false;
 window.historyDateStart = '';
 window.historyDateEnd = '';
 window.showCreateUser = false;
@@ -572,6 +573,36 @@ const dataHandler = {
 function getItems() { return window.allData.filter(d => d.type === 'item'); }
 function getUsers() { return window.allData.filter(d => d.type === 'user'); }
 function getTxs() { return window.allData.filter(d => d.type === 'tx').sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); }
+function getAnalyticsTxs() {
+  const sorted = getTxs().slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const lastSeenByKey = new Map();
+  const unique = [];
+
+  sorted.forEach(tx => {
+    const key = [
+      tx.user_name || '',
+      tx.item_id || '',
+      tx.name || '',
+      tx.tx_type || '',
+      Number(tx.qty) || 0,
+      Number(tx.price) || 0,
+      Number(tx.stock_before) || 0,
+      Number(tx.stock_after) || 0,
+      tx.note || ''
+    ].join('|');
+    const time = new Date(tx.timestamp).getTime();
+    const previous = lastSeenByKey.get(key);
+
+    if (previous !== undefined && Number.isFinite(time) && time - previous <= 2500) {
+      return;
+    }
+
+    lastSeenByKey.set(key, time);
+    unique.push(tx);
+  });
+
+  return unique.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+}
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
 function getLocalDateInputValue(date = new Date()) {
@@ -621,6 +652,19 @@ function getTxUnitPrice(tx, items = getItems()) {
 }
 function getTxValue(tx, items = getItems()) {
   return getTxUnitPrice(tx, items) * (Number(tx?.qty) || 0);
+}
+function getUserVisual(name) {
+  const palettes = [
+    { bg: 'bg-red-50', strongBg: 'bg-red-500', border: 'border-red-100', avatar: 'bg-red-500', badge: 'bg-red-100 text-red-700', text: 'text-red-700' },
+    { bg: 'bg-rose-50', strongBg: 'bg-red-600', border: 'border-rose-100', avatar: 'bg-red-600', badge: 'bg-rose-100 text-rose-700', text: 'text-rose-700' },
+    { bg: 'bg-red-100', strongBg: 'bg-red-700', border: 'border-red-200', avatar: 'bg-red-700', badge: 'bg-red-200 text-red-800', text: 'text-red-800' },
+    { bg: 'bg-rose-100', strongBg: 'bg-rose-600', border: 'border-rose-200', avatar: 'bg-rose-600', badge: 'bg-rose-200 text-rose-800', text: 'text-rose-800' },
+    { bg: 'bg-orange-50', strongBg: 'bg-red-800', border: 'border-orange-100', avatar: 'bg-red-800', badge: 'bg-orange-100 text-red-800', text: 'text-red-800' },
+    { bg: 'bg-red-200', strongBg: 'bg-rose-700', border: 'border-red-300', avatar: 'bg-rose-700', badge: 'bg-red-300 text-red-900', text: 'text-red-900' }
+  ];
+  const value = String(name || 'Staff');
+  const hash = value.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return palettes[hash % palettes.length];
 }
 function formatDate(ts) {
   if (!ts) return '-';
@@ -698,6 +742,7 @@ function render() {
     showCreateUser: window.showCreateUser,
     txCart: window.txCart.map(item => `${item.itemId}:${item.qty}`).join('|'),
     showTxDetail: window.showTxCartDetail,
+    processingTx: window.isProcessingTx,
     txDate: window.txDate,
     txDateTouched: window.txDateTouched,
     confirmMsg: window.confirmMsg,
@@ -1086,7 +1131,7 @@ function renderContent(cfg) {
 // ── Dashboard ──
 function renderDashboard(cfg) {
   const items = getItems();
-  const txs = getTxs();
+  const txs = getAnalyticsTxs();
   const stockItems = items.filter(itemUsesStock);
   const safe = stockItems.filter(i=>i.stock>i.min_stock).length;
   const low = stockItems.filter(i=>i.stock>0&&i.stock<=i.min_stock).length;
@@ -1096,7 +1141,8 @@ function renderDashboard(cfg) {
   const todayIn = todayTxs.filter(t=>t.tx_type==='IN').reduce((s,t)=>s+(t.qty||0),0);
   const totalValue = stockItems.reduce((s,i)=>s+(i.price||0)*(i.stock||0),0);
 
-  const alertItems = stockItems.filter(i=>i.stock<=i.min_stock).slice(0,5);
+  const alertItemsAll = stockItems.filter(i=>i.stock<=i.min_stock).sort((a,b)=>(a.stock||0)-(b.stock||0));
+  const alertItems = alertItemsAll.slice(0,5);
   const lowItems = stockItems.filter(i=>i.stock>0&&i.stock<=i.min_stock);
   const outItems = stockItems.filter(i=>i.stock<=0);
 
@@ -1106,6 +1152,39 @@ function renderDashboard(cfg) {
       <h2 class="text-2xl font-800 text-gray-800">Dashboard</h2>
       <p class="text-gray-500 text-sm mt-1">Ringkasan kondisi stok hari ini</p>
     </div>
+    ${alertItemsAll.length > 0 ? `
+    <div class="relative rounded-2xl bg-gradient-to-br from-red-50 via-white to-amber-50 text-gray-900 shadow-xl overflow-hidden">
+      <button id="btn-dash-alert-all" class="absolute right-4 top-4 px-3 py-1.5 rounded-xl bg-red-600 text-white text-xs font-800 hover:bg-red-700 shadow-md">
+        Lihat Semua
+      </button>
+      <div class="px-5 pt-4 pb-3 pr-32 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
+            <i data-lucide="siren" style="width:22px;height:22px;color:#b91c1c"></i>
+          </div>
+          <div>
+            <div class="text-[11px] font-800 uppercase tracking-widest text-red-600">Peringatan stok urgent</div>
+            <div class="text-xl font-900 mt-0.5 text-gray-900">${alertItemsAll.length} barang perlu dicek</div>
+            <div class="text-xs text-gray-600 mt-0.5">${out} habis, ${low} menipis. Prioritaskan stok paling sedikit.</div>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-1.5 px-3 pb-3">
+        ${alertItems.map((i) => {
+          const st = getStockStatus(i);
+          return `<div class="rounded-xl ${i.stock <= 0 ? 'bg-red-600 text-white' : 'bg-white/95 text-gray-900'} px-3 py-2 flex items-center justify-between gap-3 shadow-sm">
+            <div class="min-w-0">
+              <div class="font-800 text-sm truncate leading-tight">${i.name}</div>
+              <div class="text-[11px] ${i.stock <= 0 ? 'text-white/75' : 'text-gray-500'} mt-0.5 truncate">${i.category || 'Tanpa Kategori'}</div>
+            </div>
+            <div class="text-right shrink-0 flex items-center gap-2">
+              <div class="text-lg font-900 ${i.stock <= 0 ? 'text-white' : 'text-amber-700'}">${i.stock}</div>
+              <div class="text-[10px] font-800 ${i.stock <= 0 ? 'bg-white/20 text-white' : st.cls} px-2 py-0.5 rounded-full">${st.label}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
     <!-- Stats -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
       <div class="stat-card bg-white rounded-2xl p-4 border border-gray-200">
@@ -1152,27 +1231,6 @@ function renderDashboard(cfg) {
         <div class="text-xs text-white/80 mt-2">Total nilai barang keluar</div>
       </div>
     </div>
-    <!-- Alerts -->
-    ${alertItems.length > 0 ? `
-    <div class="bg-red-600 rounded-2xl border border-red-700 text-white overflow-hidden">
-      <div class="px-5 py-4 border-b border-red-700 bg-red-700 flex items-center gap-2 font-700 text-sm">
-        <i data-lucide="alert-triangle" style="width:18px;height:18px;color:white"></i>
-        Peringatan Stok (${alertItems.length})
-      </div>
-      <div class="divide-y divide-red-500">
-        ${alertItems.map((i, idx) => {
-          const st = getStockStatus(i);
-          return `<div class="${idx % 2 === 0 ? 'bg-red-600' : 'bg-red-500'} px-5 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <span class="px-2.5 py-1 rounded-lg text-xs font-600 ${st.cls}">${st.label}</span>
-              <span class="text-sm font-600">${i.name}</span>
-              <span class="text-xs text-white/70">${i.category||''}</span>
-            </div>
-            <div class="text-sm font-700 text-white/90">${i.stock} / min ${i.min_stock}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>` : ''}
     <!-- Recent Transactions -->
     <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
       <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-red-600 text-white">
@@ -1181,11 +1239,13 @@ function renderDashboard(cfg) {
       </div>
       ${txs.length === 0 ? `<div class="px-5 py-8 text-center text-gray-400 text-sm">Belum ada transaksi</div>` : `
       <div class="divide-y divide-gray-100">
-        ${txs.slice(0,5).map((tx) => `
-          <div class="${tx.tx_type==='IN'?'bg-white border-l-4 border-l-emerald-500':'bg-red-600 border-l-4 border-l-red-700'} px-5 py-3 flex items-center justify-between">
+        ${txs.slice(0,5).map((tx) => {
+          const uv = getUserVisual(tx.user_name);
+          return `
+          <div class="${tx.tx_type==='IN' ? uv.bg + ' ' + uv.border : uv.strongBg + ' border-transparent'} border px-5 py-3 flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-lg flex items-center justify-center ${tx.tx_type==='IN'?'bg-emerald-200':'bg-red-200'}">
-                <i data-lucide="${tx.tx_type==='IN'?'arrow-down':'arrow-up'}" style="width:14px;height:14px;color:${tx.tx_type==='IN'?'#059669':'#dc2626'}"></i>
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center ${uv.avatar} text-white text-xs font-900">
+                ${(tx.user_name || '?')[0].toUpperCase()}
               </div>
               <div>
                 <div class="text-sm font-600 text-${tx.tx_type==='IN'?'gray-800':'white'}">${tx.name||'-'}</div>
@@ -1194,7 +1254,7 @@ function renderDashboard(cfg) {
             </div>
             <span class="text-sm font-700 ${tx.tx_type==='IN'?'text-emerald-600':'text-white'}">${tx.tx_type==='IN'?'+':'-'}${tx.qty}</span>
           </div>
-        `).join('')}
+        `; }).join('')}
       </div>`}
     </div>
   </div>`;
@@ -1526,9 +1586,9 @@ function renderTransaction(cfg) {
           <div class="text-xs text-white/70">item${txCart.reduce((s, c) => s + c.qty, 0) > 1 ? 's' : ''} (${txCart.reduce((s, c) => s + c.qty, 0)} qty)</div>
         </div>
         <div class="flex gap-2 flex-1 sm:flex-none">
-          <button id="btn-submit-tx-from-bar" class="flex-1 sm:flex-auto px-6 py-2.5 rounded-xl ${txType==='IN'?'bg-emerald-600 hover:bg-emerald-700':'bg-red-700 hover:bg-red-800'} text-white text-sm font-600 transition btn-primary">
+          <button id="btn-submit-tx-from-bar" ${window.isProcessingTx ? 'disabled' : ''} class="flex-1 sm:flex-auto px-6 py-2.5 rounded-xl ${txType==='IN'?'bg-emerald-600 hover:bg-emerald-700':'bg-red-700 hover:bg-red-800'} text-white text-sm font-600 transition btn-primary disabled:opacity-60 disabled:cursor-not-allowed">
             <i data-lucide="${txType==='IN'?'arrow-down':'arrow-up'}" style="width:16px;height:16px;display:inline;margin-right:6px"></i>
-            ${txType==='IN'?'Input Masuk':'Input Keluar'}
+            ${window.isProcessingTx ? 'Menyimpan...' : (txType==='IN'?'Input Masuk':'Input Keluar')}
           </button>
           <button id="btn-tx-cancel" class="px-4 py-2.5 rounded-xl border border-white/30 text-white text-sm font-600 hover:bg-white/10 transition">
             <i data-lucide="x" style="width:16px;height:16px;display:inline"></i>
@@ -1571,8 +1631,8 @@ function renderTransaction(cfg) {
           }).join('')}
         </div>
         <div class="flex gap-2 pt-3 border-t border-gray-200">
-          <button id="btn-close-cart-detail-cancel" class="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-600 text-gray-600 hover:bg-gray-50">Batal</button>
-          <button id="btn-submit-tx-batch" class="flex-1 py-2.5 rounded-xl ${txType==='IN'?'bg-emerald-600 hover:bg-emerald-700':'bg-red-600 hover:bg-red-700'} text-white text-sm font-600 btn-primary">Simpan ${txType==='IN'?'Stok Masuk':'Stok Keluar'}</button>
+          <button id="btn-close-cart-detail-cancel" ${window.isProcessingTx ? 'disabled' : ''} class="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-600 text-gray-600 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed">Batal</button>
+          <button id="btn-submit-tx-batch" ${window.isProcessingTx ? 'disabled' : ''} class="flex-1 py-2.5 rounded-xl ${txType==='IN'?'bg-emerald-600 hover:bg-emerald-700':'bg-red-600 hover:bg-red-700'} text-white text-sm font-600 btn-primary disabled:opacity-60 disabled:cursor-not-allowed">${window.isProcessingTx ? 'Menyimpan...' : `Simpan ${txType==='IN'?'Stok Masuk':'Stok Keluar'}`}</button>
         </div>
       </div>
     </div>
@@ -1582,6 +1642,7 @@ function renderTransaction(cfg) {
 
 function renderHistory(cfg) {
   const txs = getTxs();
+  const isAdmin = window.currentUser?.role === 'admin';
   const todayValue = getLocalDateInputValue();
   if (!window.historyDateStart && !window.historyDateEnd) {
     window.historyDateStart = todayValue;
@@ -1657,8 +1718,9 @@ function renderHistory(cfg) {
       <div class="space-y-2">
         ${filtered.slice(0,100).map((tx, idx) => {
           const st = tx.tx_type === 'IN' ? { color: 'emerald', icon: 'arrow-down', bgClass: 'bg-white border-l-emerald-500' } : { color: 'red', icon: 'arrow-up', bgClass: 'bg-red-600 border-l-red-700' };
+          const uv = getUserVisual(tx.user_name);
           return `
-          <div class="rounded-xl border transition hover:shadow-md ${st.bgClass} border-l-4">
+          <div class="rounded-xl border transition hover:shadow-md ${isAdmin ? `${tx.tx_type === 'IN' ? uv.bg : uv.strongBg} ${tx.tx_type === 'IN' ? uv.border : 'border-transparent'}` : `${st.bgClass} border-l-4`}">
             <div class="p-4 flex items-start gap-3">
               <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${st.color === 'emerald' ? 'bg-emerald-200' : 'bg-red-200'}">
                 <i data-lucide="${st.icon}" style="width:18px;height:18px;color:${st.color === 'emerald' ? '#059669' : '#dc2626'}"></i>
@@ -1669,12 +1731,16 @@ function renderHistory(cfg) {
                   <span class="px-2 py-0.5 rounded text-[10px] font-700 ${st.color === 'emerald' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-200 text-red-800'}">${tx.tx_type}</span>
                 </div>
                 <div class="text-xs ${st.color === 'emerald' ? 'text-gray-500' : 'text-white/70'} mt-2 flex flex-wrap gap-4">
-                  <span class="flex items-center gap-1"><i data-lucide="user" style="width:12px;height:12px"></i>${tx.user_name}</span>
+                  <span class="flex items-center gap-1 ${isAdmin && tx.tx_type === 'IN' ? uv.text : ''}"><i data-lucide="user" style="width:12px;height:12px"></i>${tx.user_name}</span>
                   <span class="flex items-center gap-1"><i data-lucide="clock" style="width:12px;height:12px"></i>${formatDate(tx.timestamp)}</span>
                 </div>
               </div>
               <div class="text-right shrink-0">
                 <div class="text-lg font-800 ${st.color === 'emerald' ? 'text-emerald-600' : 'text-white'}">${tx.tx_type==='IN'?'+':'-'}${tx.qty}</div>
+                ${isAdmin ? `
+                <button data-del-tx="${tx.__backendId}" class="mt-2 inline-flex items-center justify-center w-8 h-8 rounded-lg ${st.color === 'emerald' ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' : 'bg-white/15 border border-white/20 text-white hover:bg-white/25'} transition" title="Hapus transaksi">
+                  <i data-lucide="trash-2" style="width:14px;height:14px"></i>
+                </button>` : ''}
                 <div class="text-[10px] ${st.color === 'emerald' ? 'text-gray-400' : 'text-white/60'} mt-1">${tx.stock_before} → ${tx.stock_after}</div>
               </div>
             </div>
@@ -1691,19 +1757,22 @@ function renderStockModal() {
   let items = [];
   let title = '';
   if (showStockModal === 'low') {
-    items = getItems().filter(i=>i.stock>0&&i.stock<=i.min_stock);
+    items = getItems().filter(i=>itemUsesStock(i)&&i.stock>0&&i.stock<=i.min_stock).sort((a,b)=>(a.stock||0)-(b.stock||0));
     title = 'Barang Menipis';
   } else if (showStockModal === 'out') {
-    items = getItems().filter(i=>i.stock<=0);
+    items = getItems().filter(i=>itemUsesStock(i)&&i.stock<=0).sort((a,b)=>(a.stock||0)-(b.stock||0));
     title = 'Barang Habis';
+  } else if (showStockModal === 'alertAll') {
+    items = getItems().filter(i=>itemUsesStock(i)&&i.stock<=i.min_stock).sort((a,b)=>(a.stock||0)-(b.stock||0));
+    title = 'Semua Peringatan Stok';
   }
   
   return `
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-40 p-4 fade-in">
-    <div class="modal-box bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 max-h-96 overflow-auto">
+    <div class="modal-box bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 max-h-[80vh] overflow-auto">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="font-700 text-lg text-gray-800">${title} (${items.length})</h3>
-        <button id="btn-close-stock" class="p-1 rounded-lg hover:bg-gray-100 text-gray-400">
+        <h3 class="font-800 text-lg text-gray-900">${title} (${items.length})</h3>
+        <button id="btn-close-stock" class="w-9 h-9 inline-flex items-center justify-center rounded-xl bg-red-50 border border-red-200 text-red-600 hover:bg-red-100" title="Tutup">
           <i data-lucide="x" style="width:18px;height:18px"></i>
         </button>
       </div>
@@ -1711,13 +1780,13 @@ function renderStockModal() {
         ${items.map((item, idx) => {
           const st = getStockStatus(item);
           return `
-          <div class="${idx % 2 === 0 ? 'bg-red-50 border-l-4 border-l-red-600' : 'bg-white border-l-4 border-l-gray-200'} p-4 rounded-lg flex items-center justify-between">
+          <div class="${item.stock <= 0 ? (idx % 2 === 0 ? 'bg-red-50' : 'bg-rose-50') : idx % 2 === 0 ? 'bg-amber-50' : 'bg-white'} text-gray-900 px-3 py-2.5 rounded-xl flex items-center justify-between shadow-sm">
             <div>
-              <div class="font-600 text-gray-800">${item.name}</div>
+              <div class="font-700 text-sm">${item.name}</div>
               <div class="text-xs text-gray-500 mt-1">${item.category||'Tanpa Kategori'} · ${formatCurrency(item.price)}</div>
             </div>
             <div class="text-right">
-              <div class="text-lg font-800 ${showStockModal==='low'?'text-amber-600':'text-red-600'}">${item.stock}</div>
+              <div class="text-lg font-900 ${item.stock <= 0 ? 'text-red-700' : 'text-amber-700'}">${item.stock}</div>
               <div class="text-xs text-gray-400">${itemUsesStock(item) ? `min: ${item.min_stock}` : 'tanpa stok'}</div>
             </div>
           </div>`;
@@ -1765,7 +1834,7 @@ function renderTopItemsModal() {
 // ── Reports (Admin) ──
 function renderReports(cfg) {
   const items = getItems();
-  const txs = getTxs();
+  const txs = getAnalyticsTxs();
   const monthRange = getCurrentMonthDateRange();
   if (!window.reportDateStart && !window.reportDateEnd) {
     window.reportDateStart = monthRange.start;
@@ -1835,9 +1904,10 @@ function renderReports(cfg) {
 
     return `<div class="fade-in space-y-6"><div class="flex items-center gap-3 mb-6"><button id="btn-back-report" class="p-2 rounded-lg hover:bg-gray-100"><i data-lucide="arrow-left" style="width:20px;height:20px;color:#6b7280"></i></button><div><h2 class="text-2xl font-800 text-gray-800">Detail ${user.name}</h2><p class="text-gray-500 text-sm mt-0.5">Riwayat transaksi personal</p></div></div><div class="grid grid-cols-3 gap-3"><div class="bg-red-600 rounded-2xl p-4 border border-red-700 text-white text-center"><div class="text-xs font-500 mb-1 text-white/80">Total Keluar</div><div class="text-2xl font-800">${userOutTxs.reduce((s,t)=>s+(t.qty||0),0)}</div></div><div class="bg-emerald-600 rounded-2xl p-4 border border-emerald-700 text-white text-center"><div class="text-xs font-500 mb-1 text-white/80">Total Masuk</div><div class="text-2xl font-800">${userInTxs.reduce((s,t)=>s+(t.qty||0),0)}</div></div><div class="bg-white rounded-2xl p-4 border border-gray-200 text-center"><div class="text-xs text-gray-600 font-500 mb-1">Omzet</div><div class="text-lg font-800 text-gray-800">${formatCurrency(userRevenue)}</div></div></div><div class="bg-white rounded-2xl border border-gray-100 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4">Riwayat Transaksi</h3><div class="space-y-2">${userTxs.length === 0 ? `<p class="text-gray-400 text-sm">Tidak ada transaksi</p>` : userTxs.slice(0, 50).map((tx, idx) => {
           const isIN = tx.tx_type === 'IN';
-          return `<div class="${isIN ? 'bg-white border-l-4 border-l-emerald-500' : 'bg-red-600 border-l-4 border-l-red-700'} p-3 rounded-lg flex items-center gap-3 hover:shadow-md transition">
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isIN ? 'bg-emerald-200' : 'bg-red-200'}">
-              <i data-lucide="${isIN ? 'arrow-down' : 'arrow-up'}" style="width:16px;height:16px;color:${isIN ? '#059669' : '#dc2626'}"></i>
+          const uv = getUserVisual(tx.user_name);
+          return `<div class="${isIN ? `${uv.bg} ${uv.border}` : `${uv.strongBg} border-transparent`} border p-3 rounded-lg flex items-center gap-3 hover:shadow-md transition">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${uv.avatar} text-white text-xs font-900">
+              ${(tx.user_name || '?')[0].toUpperCase()}
             </div>
             <div class="flex-1 min-w-0">
               <div class="font-600 text-sm ${isIN ? 'text-gray-800' : 'text-white'}">${tx.name}</div>
@@ -1845,6 +1915,9 @@ function renderReports(cfg) {
             </div>
             <div class="text-right shrink-0">
               <div class="text-lg font-800 ${isIN ? 'text-emerald-600' : 'text-white'}">${isIN ? '+' : '-'}${tx.qty}</div>
+              <button data-del-tx="${tx.__backendId}" class="mt-2 inline-flex items-center justify-center w-8 h-8 rounded-lg ${isIN ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' : 'bg-white/15 border border-white/20 text-white hover:bg-white/25'} transition" title="Hapus transaksi">
+                <i data-lucide="trash-2" style="width:14px;height:14px"></i>
+              </button>
             </div>
           </div>`;
         }).join('')}</div></div></div>`;
@@ -1901,6 +1974,15 @@ function bindEvents() {
 
 // ==================== MAIN CLICK HANDLER ====================
 async function handleMainClick(e) {
+  if (window.showStockModal && !e.target.closest('.modal-box')) {
+    e.preventDefault();
+    e.stopPropagation();
+    window.showStockModal = null;
+    lastRenderKey = '';
+    render();
+    return;
+  }
+
   if (isBlockingModalOpen() && !e.target.closest('.modal-content, .modal-box')) {
     e.preventDefault();
     e.stopPropagation();
@@ -2042,6 +2124,13 @@ async function handleMainClick(e) {
       return;
     }
 
+    if (btn.id === 'btn-dash-alert-all') {
+      window.showStockModal = 'alertAll';
+      lastRenderKey = '';
+      render();
+      return;
+    }
+
     if (btn.id === 'btn-dash-out') {
       window.showStockModal = 'out';
       lastRenderKey = '';
@@ -2065,7 +2154,7 @@ async function handleMainClick(e) {
     }
 
     if (btn.id === 'btn-show-all-items') {
-      const txs = getTxs();
+      const txs = getAnalyticsTxs();
       const itemOutMap = {};
       txs.filter(t => t.tx_type === 'OUT').forEach(t => { itemOutMap[t.name] = (itemOutMap[t.name] || 0) + (t.qty || 0); });
       window.topItemsFullList = Object.entries(itemOutMap).sort((a, b) => b[1] - a[1]);
@@ -2259,6 +2348,8 @@ async function handleMainClick(e) {
     }
 
     if (btn.id === 'btn-submit-tx-batch') {
+      e.preventDefault();
+      if (window.isProcessingTx) return;
       if (window.txCart.length === 0) {
         showToast('Keranjang kosong', 'error');
         return;
@@ -2273,54 +2364,101 @@ async function handleMainClick(e) {
     }
 
     async function processTransactionCart() {
+        if (window.isProcessingTx) return;
+        window.isProcessingTx = true;
+        lastRenderKey = '';
+        render();
+
         let successCount = 0;
         let errorCount = 0;
         const originalCart = [...window.txCart];
 
-        for (const cartItem of originalCart) {
-          const item = getItems().find(i => i.__backendId === cartItem.itemId);
-          if (!item) continue;
+        try {
+          for (const cartItem of originalCart) {
+            const item = getItems().find(i => i.__backendId === cartItem.itemId);
+            if (!item) continue;
 
-          const usesStock = itemUsesStock(item);
-          if (window.txType === 'OUT' && usesStock && cartItem.qty > item.stock) {
-            errorCount++;
-            continue;
+            const usesStock = itemUsesStock(item);
+            if (window.txType === 'OUT' && usesStock && cartItem.qty > item.stock) {
+              errorCount++;
+              continue;
+            }
+
+            const stockBefore = usesStock ? item.stock : 0;
+            const stockAfter = usesStock
+              ? (window.txType === 'IN' ? stockBefore + cartItem.qty : stockBefore - cartItem.qty)
+              : 0;
+
+            if (usesStock) {
+              const updatedItem = { ...item, stock: stockAfter };
+              const r1 = await window.stockStore.update(updatedItem);
+              if (!r1.isOk) { errorCount++; continue; }
+            }
+
+            const r2 = await window.stockStore.create({
+              type: 'tx', name: item.name, category: item.category || '', price: item.price || 0, stock: 0, min_stock: 0, pin: '', role: '',
+              item_id: item.__backendId, user_name: window.currentUser.name, tx_type: window.txType, qty: cartItem.qty,
+              stock_before: stockBefore, stock_after: stockAfter, note: cartItem.note, timestamp: getTransactionTimestamp(window.txDate)
+            });
+            if (!r2.isOk) { errorCount++; continue; }
+            successCount++;
           }
 
-          const stockBefore = usesStock ? item.stock : 0;
-          const stockAfter = usesStock
-            ? (window.txType === 'IN' ? stockBefore + cartItem.qty : stockBefore - cartItem.qty)
-            : 0;
+          window.txCart = [];
+          window.txItemSearch = '';
+          window.txCategoryFilter = 'all';
+          window.showTxCartDetail = false;
+          window.showMobileMenu = false; // Close menu
 
-          if (usesStock) {
-            const updatedItem = { ...item, stock: stockAfter };
-            const r1 = await window.stockStore.update(updatedItem);
-            if (!r1.isOk) { errorCount++; continue; }
-          }
-
-          const r2 = await window.stockStore.create({
-            type: 'tx', name: item.name, category: item.category || '', price: item.price || 0, stock: 0, min_stock: 0, pin: '', role: '',
-            item_id: item.__backendId, user_name: window.currentUser.name, tx_type: window.txType, qty: cartItem.qty,
-            stock_before: stockBefore, stock_after: stockAfter, note: cartItem.note, timestamp: getTransactionTimestamp(window.txDate)
-          });
-          if (!r2.isOk) { errorCount++; continue; }
-          successCount++;
+          if (successCount > 0) { showToast(`${successCount} item ${window.txType === 'IN' ? 'masuk' : 'keluar'} berhasil`); }
+          if (errorCount > 0) { showToast(`${errorCount} item gagal diproses`, 'error'); }
+        } finally {
+          window.isProcessingTx = false;
+          lastRenderKey = '';
+          render();
         }
-
-        window.txCart = [];
-        window.txItemSearch = '';
-        window.txCategoryFilter = 'all';
-        window.showTxCartDetail = false;
-        window.showMobileMenu = false; // Close menu
-        lastRenderKey = '';
-
-        if (successCount > 0) { showToast(`${successCount} item ${window.txType === 'IN' ? 'masuk' : 'keluar'} berhasil`); }
-        if (errorCount > 0) { showToast(`${errorCount} item gagal diproses`, 'error'); }
-
-        render();
     }
 
     // ==================== HISTORY ====================
+    if (btn.dataset.delTx) {
+      e.preventDefault();
+      if (window.currentUser?.role !== 'admin') {
+        showToast('Hanya admin yang bisa menghapus transaksi', 'error');
+        return;
+      }
+
+      const tx = getTxs().find(t => t.__backendId === btn.dataset.delTx);
+      if (!tx) {
+        showToast('Transaksi tidak ditemukan', 'error');
+        return;
+      }
+
+      showConfirm(`Hapus transaksi "${tx.name}" (${tx.tx_type} ${tx.qty})? Stok akan disesuaikan kembali.`, async () => {
+        hideConfirm();
+        const item = getItems().find(i => i.__backendId === tx.item_id) || getItems().find(i => i.name === tx.name);
+
+        if (item && itemUsesStock(item)) {
+          const qty = Number(tx.qty) || 0;
+          const stock = Number(item.stock) || 0;
+          const nextStock = tx.tx_type === 'OUT' ? stock + qty : Math.max(0, stock - qty);
+          const stockResult = await window.stockStore.update({ ...item, stock: nextStock });
+          if (!stockResult.isOk) {
+            showToast('Gagal menyesuaikan stok', 'error');
+            return;
+          }
+        }
+
+        const deleteResult = await window.stockStore.delete(tx);
+        if (deleteResult.isOk) {
+          const status = await window.stockStore.syncAfterWrite?.();
+          showSyncResult(status, 'Transaksi dihapus');
+        } else {
+          showToast('Gagal menghapus transaksi', 'error');
+        }
+      });
+      return;
+    }
+
     if (btn.id === 'btn-history-clear-date') {
       const todayValue = getLocalDateInputValue();
       window.historyDateStart = todayValue;
