@@ -264,7 +264,7 @@ function emitDataChanged(records) {
     const queued = (await getAll(OUTBOX_STORE)).sort((a, b) => a.queueId - b.queueId);
     for (const item of queued) {
       if (item.operation === 'delete') {
-        await deleteRemoteRecord(item.record);
+        await upsertRecord(item.record);
         await removeLocal(item.record.__backendId);
       } else {
         await upsertRecord(item.record);
@@ -573,36 +573,36 @@ const dataHandler = {
 function getItems() { return window.allData.filter(d => d.type === 'item'); }
 function getUsers() { return window.allData.filter(d => d.type === 'user'); }
 function getTxs() { return window.allData.filter(d => d.type === 'tx').sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); }
-function getAnalyticsTxs() {
+function getTxDuplicateKey(tx) {
+  const time = new Date(tx.timestamp).getTime();
+  const minuteBucket = Number.isFinite(time) ? Math.floor(time / 60000) : String(tx.timestamp || '');
+  return [
+    tx.user_name || '',
+    tx.item_id || tx.name || '',
+    tx.name || '',
+    tx.tx_type || '',
+    Number(tx.qty) || 0,
+    Number(tx.price) || 0,
+    tx.note || '',
+    minuteBucket
+  ].join('|');
+}
+
+function getDisplayTxs() {
   const sorted = getTxs().slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-  const lastSeenByKey = new Map();
+  const seen = new Set();
   const unique = [];
 
   sorted.forEach(tx => {
-    const key = [
-      tx.user_name || '',
-      tx.item_id || '',
-      tx.name || '',
-      tx.tx_type || '',
-      Number(tx.qty) || 0,
-      Number(tx.price) || 0,
-      Number(tx.stock_before) || 0,
-      Number(tx.stock_after) || 0,
-      tx.note || ''
-    ].join('|');
-    const time = new Date(tx.timestamp).getTime();
-    const previous = lastSeenByKey.get(key);
-
-    if (previous !== undefined && Number.isFinite(time) && time - previous <= 2500) {
-      return;
-    }
-
-    lastSeenByKey.set(key, time);
+    const key = getTxDuplicateKey(tx);
+    if (seen.has(key)) return;
+    seen.add(key);
     unique.push(tx);
   });
 
   return unique.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
 }
+function getAnalyticsTxs() { return getDisplayTxs(); }
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
 function getLocalDateInputValue(date = new Date()) {
@@ -1641,7 +1641,7 @@ function renderTransaction(cfg) {
 }
 
 function renderHistory(cfg) {
-  const txs = getTxs();
+  const txs = getDisplayTxs();
   const isAdmin = window.currentUser?.role === 'admin';
   const todayValue = getLocalDateInputValue();
   if (!window.historyDateStart && !window.historyDateEnd) {
@@ -1929,7 +1929,7 @@ function renderReports(cfg) {
 // ── Users (Admin) ──
 function renderUsers(cfg) {
   const users = getUsers();
-  return `<div class="fade-in space-y-4"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><h2 class="text-2xl font-800 text-gray-800">Manajemen User</h2><p class="text-gray-500 text-sm mt-0.5">${users.length} user terdaftar</p></div><button id="btn-add-user-page" class="px-5 py-2.5 bg-red-600 text-white rounded-xl text-sm font-600 btn-primary flex items-center gap-2 self-start"><i data-lucide="user-plus" style="width:16px;height:16px"></i>Tambah Staff</button></div><div class="grid gap-3">${users.map(u => {const userTxs = getTxs().filter(t=>t.user_name===u.name);return `<div class="bg-gradient-to-r from-red-50 to-white rounded-2xl border border-red-200 p-5 flex items-center gap-4 hover:shadow-md transition"><div class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-800 ${u.role==='admin'?'bg-red-100 text-red-700':'bg-blue-100 text-blue-700'}">${(u.name||'?')[0].toUpperCase()}</div><div class="flex-1 min-w-0"><div class="font-700 text-gray-800">${u.name}</div><div class="flex items-center gap-3 mt-1"><span class="text-xs font-600 px-2 py-0.5 rounded-lg ${u.role==='admin'?'bg-red-100 text-red-700':'bg-blue-100 text-blue-700'}">${u.role==='admin'?'Admin':'Staff'}</span><span class="text-xs text-gray-400">${userTxs.length} transaksi</span>${u.__backendId===currentUser.__backendId?'<span class="text-xs text-gray-400">Login sekarang</span>':''}</div></div><div class="flex gap-2 shrink-0"><button data-change-pin="${u.__backendId}" class="p-2 rounded-lg hover:bg-blue-100 text-gray-400 hover:text-blue-600 transition" title="Ubah PIN"><i data-lucide="key" style="width:16px;height:16px"></i></button><button data-del-user="${u.__backendId}" class="p-2 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-600 transition" title="Hapus"><i data-lucide="trash-2" style="width:16px;height:16px"></i></button></div></div>`;}).join('')}</div></div>`;
+  return `<div class="fade-in space-y-4"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><h2 class="text-2xl font-800 text-gray-800">Manajemen User</h2><p class="text-gray-500 text-sm mt-0.5">${users.length} user terdaftar</p></div><button id="btn-add-user-page" class="px-5 py-2.5 bg-red-600 text-white rounded-xl text-sm font-600 btn-primary flex items-center gap-2 self-start"><i data-lucide="user-plus" style="width:16px;height:16px"></i>Tambah Staff</button></div><div class="grid gap-3">${users.map(u => {const userTxs = getDisplayTxs().filter(t=>t.user_name===u.name);return `<div class="bg-gradient-to-r from-red-50 to-white rounded-2xl border border-red-200 p-5 flex items-center gap-4 hover:shadow-md transition"><div class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-800 ${u.role==='admin'?'bg-red-100 text-red-700':'bg-blue-100 text-blue-700'}">${(u.name||'?')[0].toUpperCase()}</div><div class="flex-1 min-w-0"><div class="font-700 text-gray-800">${u.name}</div><div class="flex items-center gap-3 mt-1"><span class="text-xs font-600 px-2 py-0.5 rounded-lg ${u.role==='admin'?'bg-red-100 text-red-700':'bg-blue-100 text-blue-700'}">${u.role==='admin'?'Admin':'Staff'}</span><span class="text-xs text-gray-400">${userTxs.length} transaksi</span>${u.__backendId===currentUser.__backendId?'<span class="text-xs text-gray-400">Login sekarang</span>':''}</div></div><div class="flex gap-2 shrink-0"><button data-change-pin="${u.__backendId}" class="p-2 rounded-lg hover:bg-blue-100 text-gray-400 hover:text-blue-600 transition" title="Ubah PIN"><i data-lucide="key" style="width:16px;height:16px"></i></button><button data-del-user="${u.__backendId}" class="p-2 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-600 transition" title="Hapus"><i data-lucide="trash-2" style="width:16px;height:16px"></i></button></div></div>`;}).join('')}</div></div>`;
 }
 
 // ── Shopping/Draft (Placeholder) ──
@@ -2436,11 +2436,13 @@ async function handleMainClick(e) {
       showConfirm(`Hapus transaksi "${tx.name}" (${tx.tx_type} ${tx.qty})? Stok akan disesuaikan kembali.`, async () => {
         hideConfirm();
         const item = getItems().find(i => i.__backendId === tx.item_id) || getItems().find(i => i.name === tx.name);
+        const txKey = getTxDuplicateKey(tx);
+        const deleteTargets = getTxs().filter(candidate => getTxDuplicateKey(candidate) === txKey);
+        const totalQty = deleteTargets.reduce((sum, candidate) => sum + (Number(candidate.qty) || 0), 0);
 
         if (item && itemUsesStock(item)) {
-          const qty = Number(tx.qty) || 0;
           const stock = Number(item.stock) || 0;
-          const nextStock = tx.tx_type === 'OUT' ? stock + qty : Math.max(0, stock - qty);
+          const nextStock = tx.tx_type === 'OUT' ? stock + totalQty : Math.max(0, stock - totalQty);
           const stockResult = await window.stockStore.update({ ...item, stock: nextStock });
           if (!stockResult.isOk) {
             showToast('Gagal menyesuaikan stok', 'error');
@@ -2448,10 +2450,16 @@ async function handleMainClick(e) {
           }
         }
 
-        const deleteResult = await window.stockStore.delete(tx);
-        if (deleteResult.isOk) {
+        let failedDeletes = 0;
+        for (const target of deleteTargets) {
+          const deleteResult = await window.stockStore.delete(target);
+          if (!deleteResult.isOk) failedDeletes++;
+        }
+
+        if (failedDeletes === 0) {
           const status = await window.stockStore.syncAfterWrite?.();
-          showSyncResult(status, 'Transaksi dihapus');
+          const duplicateInfo = deleteTargets.length > 1 ? ` (${deleteTargets.length} salinan duplikat)` : '';
+          showSyncResult(status, `Transaksi dihapus${duplicateInfo}`);
         } else {
           showToast('Gagal menghapus transaksi', 'error');
         }
