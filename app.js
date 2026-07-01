@@ -273,22 +273,40 @@ function emitDataChanged(records) {
     }
   }
 
+  async function fetchRemoteRows(table, columns) {
+    const pageSize = 1000;
+    const rows = [];
+
+    for (let from = 0; ; from += pageSize) {
+      const to = from + pageSize - 1;
+      const { data, error } = await client
+        .from(table)
+        .select(columns)
+        .order('updated_at', { ascending: true })
+        .range(from, to);
+
+      if (error) throw error;
+
+      const page = data || [];
+      rows.push(...page);
+      if (page.length < pageSize) break;
+    }
+
+    return rows;
+  }
+
   async function pullRemote() {
     if (!client || !navigator.onLine) return;
-    const queries = [
-      client.from(tables.users).select('id,name,pin,role,updated_at,deleted_at').order('updated_at', { ascending: true }),
-      client.from(tables.items).select('id,name,category,price,tracks_stock,stock,min_stock,updated_at,deleted_at').order('updated_at', { ascending: true }),
-      client.from(tables.stockLogs).select('id,item_id,item_name,category,price,user_name,tx_type,qty,stock_before,stock_after,note,created_at,updated_at,deleted_at').order('updated_at', { ascending: true })
-    ];
-
-    const [usersResult, itemsResult, logsResult] = await Promise.all(queries);
-    const error = usersResult.error || itemsResult.error || logsResult.error;
-    if (error) throw error;
+    const [usersRows, itemsRows, logsRows] = await Promise.all([
+      fetchRemoteRows(tables.users, 'id,name,pin,role,updated_at,deleted_at'),
+      fetchRemoteRows(tables.items, 'id,name,category,price,tracks_stock,stock,min_stock,updated_at,deleted_at'),
+      fetchRemoteRows(tables.stockLogs, 'id,item_id,item_name,category,price,user_name,tx_type,qty,stock_before,stock_after,note,created_at,updated_at,deleted_at')
+    ]);
 
     const remoteRecords = [
-      ...(usersResult.data || []).map(fromUserRow),
-      ...(itemsResult.data || []).map(fromItemRow),
-      ...(logsResult.data || []).map(fromStockLogRow)
+      ...usersRows.map(fromUserRow),
+      ...itemsRows.map(fromItemRow),
+      ...logsRows.map(fromStockLogRow)
     ];
     const remoteIds = new Set(remoteRecords.map(record => record.__backendId));
     const queued = await getAll(OUTBOX_STORE);
