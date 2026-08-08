@@ -1,4 +1,4 @@
-// ── State ──
+// State
 // Offline-first storage adapter: IndexedDB is the source of truth, Supabase syncs when online.
 (function setupStockStore() {
   const DB_NAME = 'stock-seblak-nyakcut-offline-db';
@@ -491,10 +491,11 @@ window.confirmCallback = null;
 window.pinModal = { show:false, title:'', cb:null, error:'' };
 window.changePinModal = { show:false, userId:'', newPin:'', error:'' };
 
-// State tracking untuk prevent double binding
+// State
 let mobileMenuOverlayBound = false;
 let eventsBound = false;
 let appInitialized = false;
+const processingTxBatchKeys = new Set();
 
 const defaultConfig = {
   app_title: 'Seblak Nyakcut',
@@ -563,7 +564,7 @@ function safeCreateIcons() {
 }
 window.safeCreateIcons = safeCreateIcons;
 
-// ── Data Handler ──
+// Data Handler
 let dataRenderVersion = 0;
 let lastDataSignature = '';
 
@@ -587,7 +588,7 @@ const dataHandler = {
   }
 };
 
-// ── Helpers ──
+// Helpers
 function getItems() { return window.allData.filter(d => d.type === 'item'); }
 function getUsers() { return window.allData.filter(d => d.type === 'user'); }
 function getTxs() { return window.allData.filter(d => d.type === 'tx').sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); }
@@ -623,6 +624,23 @@ function getDisplayTxs() {
 function getAnalyticsTxs() { return getDisplayTxs(); }
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
+function getTxBatchKey(cartItems, txType, dateValue) {
+  const itemParts = cartItems
+    .map(cartItem => [
+      cartItem.itemId || '',
+      Number(cartItem.qty) || 0,
+      cartItem.note || ''
+    ].join(':'))
+    .sort()
+    .join(';');
+
+  return [
+    window.currentUser?.__backendId || window.currentUser?.name || '',
+    txType || '',
+    dateValue || getLocalDateInputValue(),
+    itemParts
+  ].join('|');
+}
 function getLocalDateInputValue(date = new Date()) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -694,7 +712,7 @@ function getCategories() {
   return [...cats].sort();
 }
 
-// ── Toast ──
+// Toast
 let toastTimer = null;
 function showToast(msg, type='success') {
   let t = document.getElementById('toast-container');
@@ -721,13 +739,13 @@ function showSyncResult(status, successMsg) {
   showToast(successMsg);
 }
 
-// ── Inline Confirm ──
+// Inline Confirm
 let confirmCallback = null;
 let confirmMsg = '';
 function showConfirm(msg, cb) { window.confirmMsg=msg; window.confirmCallback=cb; render(); }
 function hideConfirm() { window.confirmMsg=''; window.confirmCallback=null; render(); }
 
-// ── PIN Modal ──
+// PIN Modal
 let pinModal = window.pinModal;
 function showPinModal(title, cb) { window.pinModal={show:true,title,cb,error:''}; pinModal = window.pinModal; render(); }
 function hidePinModal() { window.pinModal={show:false,title:'',cb:null,error:''}; pinModal = window.pinModal; render(); }
@@ -745,7 +763,7 @@ function isBlockingModalOpen() {
   );
 }
 
-// ── Render ──
+// Render
 let lastRenderKey = '';
 function render() {
   const app = document.getElementById('app');
@@ -884,7 +902,7 @@ function renderLogin(cfg) {
                   <!-- Info -->
                   <div class="flex-1 min-w-0">
                     <div class="font-700 text-base">${u.name}</div>
-                    <div class="text-xs ${u.role==='admin'?'text-white/80':'text-gray-500'} font-600 mt-1">${u.role==='admin'?'👑 Administrator':'👤 Staff'}</div>
+                    <div class="text-xs ${u.role==='admin'?'text-white/80':'text-gray-500'} font-600 mt-1">${u.role==='admin'?'Administrator':'Staff'}</div>
                   </div>
                   
                   <!-- Arrow Icon -->
@@ -949,7 +967,7 @@ function renderCreateUserModal(cfg) {
         </div>` : ''}
         <div>
           <label class="block text-sm font-600 text-gray-700 mb-1">PIN (4 digit)</label>
-          <input id="cu-pin" type="password" maxlength="4" pattern="\\d{4}" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm tracking-widest" placeholder="••••" required>
+          <input id="cu-pin" type="password" maxlength="4" pattern="\\d{4}" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm tracking-widest" placeholder="PIN" required>
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" id="btn-cancel-cu" class="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-600 text-gray-600 hover:bg-gray-50">Batal</button>
@@ -970,7 +988,7 @@ function renderChangePinModal() {
       </div>
       <h3 class="font-700 text-lg text-gray-800 mb-1">Ubah PIN</h3>
       <p class="text-gray-500 text-sm mb-4">Masukkan PIN baru (4 digit)</p>
-      <input id="new-pin-input" type="password" maxlength="4" pattern="\\d{4}" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] font-700 mb-2" placeholder="••••" autofocus>
+      <input id="new-pin-input" type="password" maxlength="4" pattern="\\d{4}" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] font-700 mb-2" placeholder="PIN" autofocus>
       ${window.changePinModal.error?`<p class="text-red-600 text-xs mb-3">${window.changePinModal.error}</p>`:''}
       <div class="flex gap-3">
         <button id="btn-change-pin-cancel" class="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-600 text-gray-600 hover:bg-gray-50">Batal</button>
@@ -990,7 +1008,7 @@ function renderPinModalHTML() {
       </div>
       <h3 class="font-700 text-lg text-gray-800 mb-1">${window.pinModal.title}</h3>
       <p class="text-gray-500 text-sm mb-4">Masukkan PIN 4 digit</p>
-      <input id="pin-input" type="password" maxlength="4" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] font-700" placeholder="••••" autofocus>
+      <input id="pin-input" type="password" maxlength="4" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.5em] font-700" placeholder="PIN" autofocus>
       ${window.pinModal.error?`<p class="text-red-600 text-xs mt-2">${window.pinModal.error}</p>`:''}
       <div class="flex gap-3 mt-5">
         <button id="btn-pin-cancel" class="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-600 text-gray-600 hover:bg-gray-50">Batal</button>
@@ -1000,7 +1018,7 @@ function renderPinModalHTML() {
   </div>`;
 }
 
-// ── Main Layout ──
+// Main Layout
 function renderMain(cfg) {
   const title = cfg.app_title || defaultConfig.app_title;
   const isAdmin = window.currentUser.role === 'admin';
@@ -1044,7 +1062,7 @@ function renderMain(cfg) {
           </div>
           <div class="hidden lg:block">
             <div class="text-sm font-700 text-white">${window.currentUser.name}</div>
-            <div class="text-xs text-white/80 font-600 mt-0.5">${window.currentUser.role==='admin'?'👑 Admin':'👤 Staff'}</div>
+            <div class="text-xs text-white/80 font-600 mt-0.5">${window.currentUser.role==='admin'?'Admin':'Staff'}</div>
           </div>
         </div>
         <button id="btn-logout" class="p-2 rounded-lg hover:bg-red-700 text-white/80 hover:text-white transition duration-200">
@@ -1146,7 +1164,7 @@ function renderContent(cfg) {
   }
 }
 
-// ── Dashboard ──
+// Dashboard
 function renderDashboard(cfg) {
   const items = getItems();
   const txs = getAnalyticsTxs();
@@ -1267,7 +1285,7 @@ function renderDashboard(cfg) {
               </div>
               <div>
                 <div class="text-sm font-600 text-${tx.tx_type==='IN'?'gray-800':'white'}">${tx.name||'-'}</div>
-                <div class="text-xs text-${tx.tx_type==='IN'?'gray-500':'white/70'}">${tx.user_name} · ${formatDate(tx.timestamp)}</div>
+                <div class="text-xs text-${tx.tx_type==='IN'?'gray-500':'white/70'}">${tx.user_name} &middot; ${formatDate(tx.timestamp)}</div>
               </div>
             </div>
             <span class="text-sm font-700 ${tx.tx_type==='IN'?'text-emerald-600':'text-white'}">${tx.tx_type==='IN'?'+':'-'}${tx.qty}</span>
@@ -1278,7 +1296,7 @@ function renderDashboard(cfg) {
   </div>`;
 }
 
-// ── Items ──
+// Items
 function renderItems(cfg) {
   const items = getItems();
   const cats = getCategories();
@@ -1334,10 +1352,10 @@ function renderItems(cfg) {
                   ${item.category?`<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-700">${item.category}</span>`:''}
                   <span class="text-[10px] font-600 px-2 py-0.5 rounded-lg ${st.cls}">${st.label}</span>
                 </div>
-                <div class="text-xs text-gray-500 mt-1">${formatCurrency(item.price)} · ${itemUsesStock(item) ? `min: ${item.min_stock}` : 'tanpa kontrol stok'}</div>
+                <div class="text-xs text-gray-500 mt-1">${formatCurrency(item.price)} &middot; ${itemUsesStock(item) ? `min: ${item.min_stock}` : 'tanpa kontrol stok'}</div>
               </div>
               <div class="text-right shrink-0">
-                <div class="text-lg font-800 ${!itemUsesStock(item)?'text-blue-600':item.stock<=0?'text-red-600':item.stock<=item.min_stock?'text-amber-600':'text-emerald-600'}">${itemUsesStock(item) ? item.stock : '∞'}</div>
+                <div class="text-lg font-800 ${!itemUsesStock(item)?'text-blue-600':item.stock<=0?'text-red-600':item.stock<=item.min_stock?'text-amber-600':'text-emerald-600'}">${itemUsesStock(item) ? item.stock : '&infin;'}</div>
               </div>
               ${currentUser.role==='admin'?`
               <div class="flex items-center gap-2 ml-2 shrink-0">
@@ -1617,7 +1635,7 @@ function renderTransaction(cfg) {
               <div class="w-full p-4 ${isOutOfStock ? 'bg-gray-50 opacity-75' : 'hover:bg-red-50'} transition flex items-center justify-between group">
                 <div class="flex-1 min-w-0">
                   <div class="font-600 text-gray-800 text-sm">${item.name}</div>
-                  <div class="text-xs text-gray-500 mt-1">${isAdmin ? `${formatCurrency(item.price)} · ` : ''}${itemUsesStock(item) ? `Stok: ${item.stock}` : 'Tanpa stok'}${isOutOfStock ? ' · Habis' : ''}</div>
+                  <div class="text-xs text-gray-500 mt-1">${isAdmin ? `${formatCurrency(item.price)} &middot; ` : ''}${itemUsesStock(item) ? `Stok: ${item.stock}` : 'Tanpa stok'}${isOutOfStock ? ' &middot; Habis' : ''}</div>
                 </div>
                 <div class="flex items-center gap-2 ml-3 shrink-0">
                   ${qty > 0 ? `<button data-quick-minus="${item.__backendId}" class="w-9 h-9 rounded-lg bg-red-100 text-red-700 flex items-center justify-center font-900 hover:bg-red-200 transition">-</button><span class="min-w-8 text-center px-2 py-1 rounded-full bg-red-600 text-white text-sm font-700">${qty}</span>` : ''}
@@ -1673,7 +1691,7 @@ function renderTransaction(cfg) {
                 <div class="font-700 text-gray-800 text-sm truncate">${itemData?.name || '?'}</div>
               </div>
               <div class="flex items-center gap-1 shrink-0">
-                <button data-qty-minus="${idx}" class="w-6 h-6 rounded bg-red-200 hover:bg-red-300 text-red-700 font-700 text-xs transition">−</button>
+                <button data-qty-minus="${idx}" class="w-6 h-6 rounded bg-red-200 hover:bg-red-300 text-red-700 font-700 text-xs transition">-</button>
                 <input data-edit-qty="${idx}" type="number" min="1" value="${cartItem.qty}" class="w-10 border border-red-300 rounded px-1 py-0.5 text-xs text-center font-600">
                 <button data-qty-plus="${idx}" class="w-6 h-6 rounded bg-red-200 hover:bg-red-300 text-red-700 font-700 text-xs transition">+</button>
               </div>
@@ -1756,7 +1774,7 @@ function renderHistory(cfg) {
       <div class="flex-1 min-w-0">
         <input id="history-date-start" type="date" value="${historyDateStart}" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:border-red-400" title="Dari tanggal">
       </div>
-      <span class="text-gray-400 text-xs font-500 px-1">–</span>
+      <span class="text-gray-400 text-xs font-500 px-1">-</span>
       <div class="flex-1 min-w-0">
         <input id="history-date-end" type="date" value="${historyDateEnd}" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:border-red-400" title="Sampai tanggal">
       </div>
@@ -1794,7 +1812,7 @@ function renderHistory(cfg) {
                 <button data-del-tx="${tx.__backendId}" class="mt-2 inline-flex items-center justify-center w-8 h-8 rounded-lg ${st.color === 'emerald' ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' : 'bg-white/15 border border-white/20 text-white hover:bg-white/25'} transition" title="Hapus transaksi">
                   <i data-lucide="trash-2" style="width:14px;height:14px"></i>
                 </button>` : ''}
-                <div class="text-[10px] ${st.color === 'emerald' ? 'text-gray-400' : 'text-white/60'} mt-1">${tx.stock_before} → ${tx.stock_after}</div>
+                <div class="text-[10px] ${st.color === 'emerald' ? 'text-gray-400' : 'text-white/60'} mt-1">${tx.stock_before} &rarr; ${tx.stock_after}</div>
               </div>
             </div>
           </div>`;
@@ -1804,7 +1822,7 @@ function renderHistory(cfg) {
   </div>`;
 }
 
-// ── Stock Modal ──
+// Stock Modal
 function renderStockModal() {
   if (!showStockModal) return '';
   let items = [];
@@ -1836,7 +1854,7 @@ function renderStockModal() {
           <div class="${item.stock <= 0 ? (idx % 2 === 0 ? 'bg-red-50' : 'bg-rose-50') : idx % 2 === 0 ? 'bg-amber-50' : 'bg-white'} text-gray-900 px-3 py-2.5 rounded-xl flex items-center justify-between shadow-sm">
             <div>
               <div class="font-700 text-sm">${item.name}</div>
-              <div class="text-xs text-gray-500 mt-1">${item.category||'Tanpa Kategori'} · ${formatCurrency(item.price)}</div>
+              <div class="text-xs text-gray-500 mt-1">${item.category||'Tanpa Kategori'} &middot; ${formatCurrency(item.price)}</div>
             </div>
             <div class="text-right">
               <div class="text-lg font-900 ${item.stock <= 0 ? 'text-red-700' : 'text-amber-700'}">${item.stock}</div>
@@ -1849,7 +1867,7 @@ function renderStockModal() {
   </div>`;
 }
 
-// ── Top Items Modal ──
+// Items
 function renderTopItemsModal() {
   if (!window.showTopItemsModal || window.topItemsFullList.length === 0) return '';
   
@@ -1884,7 +1902,7 @@ function renderTopItemsModal() {
   </div>`;
 }
 
-// ── Reports (Admin) ──
+// Reports (Admin)
 function renderReports(cfg) {
   const items = getItems();
   const txs = getAnalyticsTxs();
@@ -1976,16 +1994,16 @@ function renderReports(cfg) {
         }).join('')}</div></div></div>`;
   }
 
-  return `<div class="fade-in space-y-6"><div><h2 class="text-2xl font-800 text-gray-800">Laporan</h2><p class="text-gray-500 text-sm mt-0.5">Insight operasional berbasis data</p></div><!-- Date Filter Minimalis 1 Baris --><div class="bg-gradient-to-r from-red-50 to-white rounded-xl border border-red-200 p-2.5 flex items-center gap-2"><div class="flex-1 min-w-0"><input id="report-date-start" type="date" value="${window.reportDateStart||''}" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:border-red-400" title="Dari tanggal"></div><span class="text-gray-400 text-xs font-500 px-1">–</span><div class="flex-1 min-w-0"><input id="report-date-end" type="date" value="${window.reportDateEnd||''}" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:border-red-400" title="Sampai tanggal"></div><button id="btn-clear-date-filter" class="px-3 py-1.5 rounded-lg border border-red-300 text-red-600 text-xs font-600 hover:bg-red-100 transition whitespace-nowrap bg-white">Bersihkan</button></div><div class="grid grid-cols-2 lg:grid-cols-4 gap-3"><div class="bg-red-600 rounded-2xl p-4 border border-red-700 text-center text-white"><div class="text-xs font-500 mb-1 text-white/80">Total Keluar</div><div class="text-2xl font-800">${outTxs.reduce((s,t)=>s+(t.qty||0),0)}</div></div><div class="bg-emerald-600 rounded-2xl p-4 border border-emerald-700 text-center text-white"><div class="text-xs font-500 mb-1 text-white/80">Total Masuk</div><div class="text-2xl font-800">${filteredTxs.filter(t=>t.tx_type==='IN').reduce((s,t)=>s+(t.qty||0),0)}</div></div><div class="bg-white rounded-2xl p-4 border border-gray-200 text-center"><div class="text-xs text-gray-600 font-500 mb-1">Estimasi Pengeluaran</div><div class="text-lg font-800 text-gray-800">${formatCurrency(estRevenue)}</div></div><div class="bg-blue-600 rounded-2xl p-4 border border-blue-700 text-center text-white"><div class="text-xs font-500 mb-1 text-white/80">Total Transaksi</div><div class="text-2xl font-800">${filteredTxs.length}</div></div></div><div class="bg-white rounded-2xl border border-gray-100 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4 flex items-center gap-2"><i data-lucide="trending-up" style="width:16px;height:16px;color:#dc2626"></i>Barang Terlaris (Keluar)</h3>${topItems.length===0?'<p class="text-gray-400 text-sm">Belum ada data</p>':`<div class="space-y-3">${topItems.map((ti,idx) => `<div class="flex items-center gap-3 p-3 rounded-xl ${idx % 2 === 0 ? 'bg-red-50 border border-red-200' : 'bg-white border border-gray-100'}"><span class="w-6 text-center text-xs font-800 ${idx===0?'text-red-600':'text-gray-400'}">${idx+1}</span><div class="flex-1"><div class="flex items-center justify-between mb-1"><span class="text-sm font-600 text-gray-800">${ti[0]}</span><span class="text-sm font-700 text-gray-600">${ti[1]}</span></div><div class="w-full bg-gray-100 rounded-full h-2"><div class="h-2 rounded-full ${idx===0?'bg-red-600':'bg-red-400'}" style="width:${(ti[1]/maxOut*100).toFixed(0)}%"></div></div></div></div>`).join('')}<button id="btn-show-all-items" class="w-full mt-3 py-2 rounded-lg border-2 border-red-300 text-red-600 text-xs font-700 hover:bg-red-50 transition">Lihat Semua</button></div>`}</div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4"><div class="bg-red-600 rounded-2xl border border-red-700 text-white p-5"><h3 class="font-700 text-sm mb-4 flex items-center gap-2"><i data-lucide="users" style="width:16px;height:16px;color:white"></i>Omset per Staff</h3>${userStats.length===0?'<p class="text-white/70 text-sm">Belum ada data</p>':`<div class="space-y-2">${userStats.map((us, idx) => `<button data-select-report-user="${us.name}" class="w-full text-left flex items-center justify-between p-3 ${idx % 2 === 0 ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} rounded-xl transition"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-700 text-white">${us.name[0].toUpperCase()}</div><div><div class="text-sm font-600">${us.name}</div><div class="text-xs text-white/70">${us.qty} item</div></div></div><div class="text-right"><div class="text-sm font-800">${formatCurrency(us.revenue)}</div></div></button>`).join('')}</div>`}</div><div class="bg-white rounded-2xl border border-gray-100 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4 flex items-center gap-2"><i data-lucide="pie-chart" style="width:16px;height:16px;color:#dc2626"></i>Distribusi Kategori</h3>${catStats.length===0?'<p class="text-gray-400 text-sm">Belum ada data</p>':`<div class="space-y-2">${catStats.map((cs,idx) => `<div class="flex items-center justify-between p-2.5 rounded-lg ${idx%2===0?'bg-red-50':'bg-white border border-gray-100'}"><span class="text-sm font-600 text-gray-700">${cs[0]}</span><span class="text-sm font-700 text-gray-800">${cs[1]} barang</span></div>`).join('')}</div>`}</div></div>${months.length>0?`<div class="bg-red-50 rounded-2xl border border-red-200 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4 flex items-center gap-2"><i data-lucide="calendar" style="width:16px;height:16px;color:#dc2626"></i>Tren Bulanan</h3><div class="space-y-2">${months.map((m,idx) => {const d = monthMap[m];return `<div class="flex items-center gap-4 p-2.5 rounded-lg ${idx%2===0?'bg-red-100 border border-red-200':'bg-white border border-gray-100'}"><span class="text-sm font-600 text-gray-700 w-20">${m}</span><span class="text-xs font-600 text-emerald-600">IN: ${d.in_qty}</span><span class="text-xs font-600 text-red-600">OUT: ${d.out_qty}</span></div>`;}).join('')}</div></div>`:''}</div>`;
+  return `<div class="fade-in space-y-6"><div><h2 class="text-2xl font-800 text-gray-800">Laporan</h2><p class="text-gray-500 text-sm mt-0.5">Insight operasional berbasis data</p></div><!-- Date Filter Minimalis 1 Baris --><div class="bg-gradient-to-r from-red-50 to-white rounded-xl border border-red-200 p-2.5 flex items-center gap-2"><div class="flex-1 min-w-0"><input id="report-date-start" type="date" value="${window.reportDateStart||''}" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:border-red-400" title="Dari tanggal"></div><span class="text-gray-400 text-xs font-500 px-1">-</span><div class="flex-1 min-w-0"><input id="report-date-end" type="date" value="${window.reportDateEnd||''}" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:border-red-400" title="Sampai tanggal"></div><button id="btn-clear-date-filter" class="px-3 py-1.5 rounded-lg border border-red-300 text-red-600 text-xs font-600 hover:bg-red-100 transition whitespace-nowrap bg-white">Bersihkan</button></div><div class="grid grid-cols-2 lg:grid-cols-4 gap-3"><div class="bg-red-600 rounded-2xl p-4 border border-red-700 text-center text-white"><div class="text-xs font-500 mb-1 text-white/80">Total Keluar</div><div class="text-2xl font-800">${outTxs.reduce((s,t)=>s+(t.qty||0),0)}</div></div><div class="bg-emerald-600 rounded-2xl p-4 border border-emerald-700 text-center text-white"><div class="text-xs font-500 mb-1 text-white/80">Total Masuk</div><div class="text-2xl font-800">${filteredTxs.filter(t=>t.tx_type==='IN').reduce((s,t)=>s+(t.qty||0),0)}</div></div><div class="bg-white rounded-2xl p-4 border border-gray-200 text-center"><div class="text-xs text-gray-600 font-500 mb-1">Estimasi Pengeluaran</div><div class="text-lg font-800 text-gray-800">${formatCurrency(estRevenue)}</div></div><div class="bg-blue-600 rounded-2xl p-4 border border-blue-700 text-center text-white"><div class="text-xs font-500 mb-1 text-white/80">Total Transaksi</div><div class="text-2xl font-800">${filteredTxs.length}</div></div></div><div class="bg-white rounded-2xl border border-gray-100 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4 flex items-center gap-2"><i data-lucide="trending-up" style="width:16px;height:16px;color:#dc2626"></i>Barang Terlaris (Keluar)</h3>${topItems.length===0?'<p class="text-gray-400 text-sm">Belum ada data</p>':`<div class="space-y-3">${topItems.map((ti,idx) => `<div class="flex items-center gap-3 p-3 rounded-xl ${idx % 2 === 0 ? 'bg-red-50 border border-red-200' : 'bg-white border border-gray-100'}"><span class="w-6 text-center text-xs font-800 ${idx===0?'text-red-600':'text-gray-400'}">${idx+1}</span><div class="flex-1"><div class="flex items-center justify-between mb-1"><span class="text-sm font-600 text-gray-800">${ti[0]}</span><span class="text-sm font-700 text-gray-600">${ti[1]}</span></div><div class="w-full bg-gray-100 rounded-full h-2"><div class="h-2 rounded-full ${idx===0?'bg-red-600':'bg-red-400'}" style="width:${(ti[1]/maxOut*100).toFixed(0)}%"></div></div></div></div>`).join('')}<button id="btn-show-all-items" class="w-full mt-3 py-2 rounded-lg border-2 border-red-300 text-red-600 text-xs font-700 hover:bg-red-50 transition">Lihat Semua</button></div>`}</div><div class="grid grid-cols-1 lg:grid-cols-2 gap-4"><div class="bg-red-600 rounded-2xl border border-red-700 text-white p-5"><h3 class="font-700 text-sm mb-4 flex items-center gap-2"><i data-lucide="users" style="width:16px;height:16px;color:white"></i>Omset per Staff</h3>${userStats.length===0?'<p class="text-white/70 text-sm">Belum ada data</p>':`<div class="space-y-2">${userStats.map((us, idx) => `<button data-select-report-user="${us.name}" class="w-full text-left flex items-center justify-between p-3 ${idx % 2 === 0 ? 'bg-red-700 hover:bg-red-800' : 'bg-red-500 hover:bg-red-600'} rounded-xl transition"><div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-700 text-white">${us.name[0].toUpperCase()}</div><div><div class="text-sm font-600">${us.name}</div><div class="text-xs text-white/70">${us.qty} item</div></div></div><div class="text-right"><div class="text-sm font-800">${formatCurrency(us.revenue)}</div></div></button>`).join('')}</div>`}</div><div class="bg-white rounded-2xl border border-gray-100 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4 flex items-center gap-2"><i data-lucide="pie-chart" style="width:16px;height:16px;color:#dc2626"></i>Distribusi Kategori</h3>${catStats.length===0?'<p class="text-gray-400 text-sm">Belum ada data</p>':`<div class="space-y-2">${catStats.map((cs,idx) => `<div class="flex items-center justify-between p-2.5 rounded-lg ${idx%2===0?'bg-red-50':'bg-white border border-gray-100'}"><span class="text-sm font-600 text-gray-700">${cs[0]}</span><span class="text-sm font-700 text-gray-800">${cs[1]} barang</span></div>`).join('')}</div>`}</div></div>${months.length>0?`<div class="bg-red-50 rounded-2xl border border-red-200 p-5"><h3 class="font-700 text-gray-800 text-sm mb-4 flex items-center gap-2"><i data-lucide="calendar" style="width:16px;height:16px;color:#dc2626"></i>Tren Bulanan</h3><div class="space-y-2">${months.map((m,idx) => {const d = monthMap[m];return `<div class="flex items-center gap-4 p-2.5 rounded-lg ${idx%2===0?'bg-red-100 border border-red-200':'bg-white border border-gray-100'}"><span class="text-sm font-600 text-gray-700 w-20">${m}</span><span class="text-xs font-600 text-emerald-600">IN: ${d.in_qty}</span><span class="text-xs font-600 text-red-600">OUT: ${d.out_qty}</span></div>`;}).join('')}</div></div>`:''}</div>`;
 }
 
-// ── Users (Admin) ──
+// Users (Admin)
 function renderUsers(cfg) {
   const users = getUsers();
   return `<div class="fade-in space-y-4"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><h2 class="text-2xl font-800 text-gray-800">Manajemen User</h2><p class="text-gray-500 text-sm mt-0.5">${users.length} user terdaftar</p></div><button id="btn-add-user-page" class="px-5 py-2.5 bg-red-600 text-white rounded-xl text-sm font-600 btn-primary flex items-center gap-2 self-start"><i data-lucide="user-plus" style="width:16px;height:16px"></i>Tambah Staff</button></div><div class="grid gap-3">${users.map(u => {const userTxs = getDisplayTxs().filter(t=>t.user_name===u.name);return `<div class="bg-gradient-to-r from-red-50 to-white rounded-2xl border border-red-200 p-5 flex items-center gap-4 hover:shadow-md transition"><div class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-800 ${u.role==='admin'?'bg-red-100 text-red-700':'bg-blue-100 text-blue-700'}">${(u.name||'?')[0].toUpperCase()}</div><div class="flex-1 min-w-0"><div class="font-700 text-gray-800">${u.name}</div><div class="flex items-center gap-3 mt-1"><span class="text-xs font-600 px-2 py-0.5 rounded-lg ${u.role==='admin'?'bg-red-100 text-red-700':'bg-blue-100 text-blue-700'}">${u.role==='admin'?'Admin':'Staff'}</span><span class="text-xs text-gray-400">${userTxs.length} transaksi</span>${u.__backendId===currentUser.__backendId?'<span class="text-xs text-gray-400">Login sekarang</span>':''}</div></div><div class="flex gap-2 shrink-0"><button data-change-pin="${u.__backendId}" class="p-2 rounded-lg hover:bg-blue-100 text-gray-400 hover:text-blue-600 transition" title="Ubah PIN"><i data-lucide="key" style="width:16px;height:16px"></i></button><button data-del-user="${u.__backendId}" class="p-2 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-600 transition" title="Hapus"><i data-lucide="trash-2" style="width:16px;height:16px"></i></button></div></div>`;}).join('')}</div></div>`;
 }
 
-// ── Shopping/Draft (Placeholder) ──
+// Shopping/Draft (Placeholder)
 function renderShoppingFrame(title, pageHash) {
   const src = `apk%20belanja.html#${pageHash}`;
   return `
@@ -2009,7 +2027,7 @@ function renderDraftShopping(cfg) {
 }
 
 
-// ── Events ──
+// Events
 function bindEvents() {
   const app = document.getElementById('app');
   if (!app) return;
@@ -2417,14 +2435,18 @@ async function handleMainClick(e) {
     }
 
     async function processTransactionCart() {
-        if (window.isProcessingTx) return;
+        const originalCart = [...window.txCart];
+        const batchKey = getTxBatchKey(originalCart, window.txType, window.txDate);
+        if (window.isProcessingTx || processingTxBatchKeys.has(batchKey)) return;
+
+        processingTxBatchKeys.add(batchKey);
         window.isProcessingTx = true;
         lastRenderKey = '';
         render();
 
         let successCount = 0;
         let errorCount = 0;
-        const originalCart = [...window.txCart];
+        const txTimestamp = getTransactionTimestamp(window.txDate);
 
         try {
           for (const cartItem of originalCart) {
@@ -2451,7 +2473,7 @@ async function handleMainClick(e) {
             const r2 = await window.stockStore.create({
               type: 'tx', name: item.name, category: item.category || '', price: item.price || 0, stock: 0, min_stock: 0, pin: '', role: '',
               item_id: item.__backendId, user_name: window.currentUser.name, tx_type: window.txType, qty: cartItem.qty,
-              stock_before: stockBefore, stock_after: stockAfter, note: cartItem.note, timestamp: getTransactionTimestamp(window.txDate)
+              stock_before: stockBefore, stock_after: stockAfter, note: cartItem.note, timestamp: txTimestamp
             });
             if (!r2.isOk) { errorCount++; continue; }
             successCount++;
@@ -2466,6 +2488,7 @@ async function handleMainClick(e) {
           if (successCount > 0) { showToast(`${successCount} item ${window.txType === 'IN' ? 'masuk' : 'keluar'} berhasil`); }
           if (errorCount > 0) { showToast(`${errorCount} item gagal diproses`, 'error'); }
         } finally {
+          processingTxBatchKeys.delete(batchKey);
           window.isProcessingTx = false;
           lastRenderKey = '';
           render();
@@ -2489,13 +2512,11 @@ async function handleMainClick(e) {
       showConfirm(`Hapus transaksi "${tx.name}" (${tx.tx_type} ${tx.qty})? Stok akan disesuaikan kembali.`, async () => {
         hideConfirm();
         const item = getItems().find(i => i.__backendId === tx.item_id) || getItems().find(i => i.name === tx.name);
-        const txKey = getTxDuplicateKey(tx);
-        const deleteTargets = getTxs().filter(candidate => getTxDuplicateKey(candidate) === txKey);
-        const totalQty = deleteTargets.reduce((sum, candidate) => sum + (Number(candidate.qty) || 0), 0);
 
         if (item && itemUsesStock(item)) {
           const stock = Number(item.stock) || 0;
-          const nextStock = tx.tx_type === 'OUT' ? stock + totalQty : Math.max(0, stock - totalQty);
+          const qty = Number(tx.qty) || 0;
+          const nextStock = tx.tx_type === 'OUT' ? stock + qty : Math.max(0, stock - qty);
           const stockResult = await window.stockStore.update({ ...item, stock: nextStock });
           if (!stockResult.isOk) {
             showToast('Gagal menyesuaikan stok', 'error');
@@ -2503,16 +2524,10 @@ async function handleMainClick(e) {
           }
         }
 
-        let failedDeletes = 0;
-        for (const target of deleteTargets) {
-          const deleteResult = await window.stockStore.delete(target);
-          if (!deleteResult.isOk) failedDeletes++;
-        }
-
-        if (failedDeletes === 0) {
+        const deleteResult = await window.stockStore.delete(tx);
+        if (deleteResult.isOk) {
           const status = await window.stockStore.syncAfterWrite?.();
-          const duplicateInfo = deleteTargets.length > 1 ? ` (${deleteTargets.length} salinan duplikat)` : '';
-          showSyncResult(status, `Transaksi dihapus${duplicateInfo}`);
+          showSyncResult(status, 'Transaksi dihapus');
         } else {
           showToast('Gagal menghapus transaksi', 'error');
         }
@@ -2799,7 +2814,7 @@ function bindInputHandlers() {
   }
 }
 
-// ── Storage Init ──
+// Storage Init
 async function initializeApp() {
   if (appInitialized) return;
   appInitialized = true;
@@ -2903,4 +2918,6 @@ if (window.elementSdk) {
 // Start app
 console.log('[APP] Starting initialization...');
 initializeApp();
+
+
 
